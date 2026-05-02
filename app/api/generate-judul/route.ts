@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Wajib ditambahkan agar API bisa berjalan di infrastruktur Cloudflare Pages
 export const runtime = 'edge';
 
-// Inisialisasi Google Gen AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(req: Request) {
@@ -16,7 +14,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Jurusan harus diisi' }, { status: 400 });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    // Cek apakah API Key terbaca oleh Next.js
+    if (!process.env.GEMINI_API_KEY) {
+      return NextResponse.json({ error: 'API Key Gemini belum terbaca. Coba restart .' }, { status: 500 });
+    }
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const promptText = `
       Kamu adalah asisten akademik ahli yang membantu mahasiswa menyusun judul skripsi.
@@ -25,7 +28,7 @@ export async function POST(req: Request) {
       
       ATURAN PENTING:
       Kamu HANYA boleh membalas dengan format JSON Array yang berisi string (daftar judul). 
-      Jangan tambahkan teks pembuka, penutup, atau format markdown (seperti \`\`\`json).
+      Jangan tambahkan teks pembuka, penutup, atau format markdown.
       
       Contoh format balasan yang benar:
       ["Judul 1", "Judul 2", "Judul 3"]
@@ -35,13 +38,19 @@ export async function POST(req: Request) {
     const response = await result.response;
     const textOutput = response.text();
 
-    const cleanJsonString = textOutput.replace(/```json/g, '').replace(/```/g, '').trim();
-    const titlesArray = JSON.parse(cleanJsonString);
+    try {
+      // Mencoba parse respons AI ke format JSON
+      const cleanJsonString = textOutput.replace(/```json/g, '').replace(/```/g, '').trim();
+      const titlesArray = JSON.parse(cleanJsonString);
+      return NextResponse.json({ judul: titlesArray });
+    } catch (parseError) {
+      // Jika AI membalas dengan format yang tidak bisa di-parse
+      return NextResponse.json({ error: `Format balasan AI salah: ${textOutput}` }, { status: 500 });
+    }
 
-    return NextResponse.json({ judul: titlesArray });
-
-  } catch (error) {
-    console.error('Error generating titles:', error);
-    return NextResponse.json({ error: 'Gagal memproses request dari AI' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Error server API:', error);
+    // Mengirimkan pesan error asli dari Gemini API ke UI
+    return NextResponse.json({ error: `Pesan Error Server: ${error.message || 'Unknown Error'}` }, { status: 500 });
   }
 }
