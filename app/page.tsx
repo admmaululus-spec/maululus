@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/app/lib/supabase';
 
 // === KOMPONEN ANIMASI SCROLL (FADE IN + BLUR) ===
 const FadeIn = ({ children, delay = 0, className = '' }: { children: ReactNode, delay?: number, className?: string }) => {
@@ -46,25 +48,77 @@ const FadeIn = ({ children, delay = 0, className = '' }: { children: ReactNode, 
 
 // === HALAMAN UTAMA ===
 export default function Home() {
+  const router = useRouter();
+
+  // ⚠️ DAFTAR EMAIL ADMIN (Pastikan sama dengan yang ada di app/admin/layout.tsx)
+  const ADMIN_EMAILS = ['admin@maululus.com', 'emailkamu@gmail.com']; 
+
+  useEffect(() => {
+    // Membaca perubahan status autentikasi
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        
+        // Cek apakah email yang login adalah milik Admin
+        const userEmail = session.user.email || '';
+        
+        if (ADMIN_EMAILS.includes(userEmail)) {
+          router.push('/admin'); // Lempar ke Dashboard Admin
+        } else {
+          router.push('/dashboard'); // Lempar ke Dashboard Mahasiswa
+        }
+        
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+    
+  }, [router]);
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-blue-200">
       
-      {/* Navbar */}
-      <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/70 backdrop-blur-lg transition-all">
+      {/* Navbar Minimalis Elegan */}
+      <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md transition-all">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
+          
+          {/* Logo */}
           <div className="flex items-center gap-2">
             <div className="text-2xl font-extrabold tracking-tight text-blue-700">
               Mau<span className="text-blue-500">lulus</span>
             </div>
           </div>
-          <nav className="hidden md:flex items-center gap-8 font-semibold text-slate-600">
-            <a href="#beranda" className="hover:text-blue-600 transition-colors">Beranda</a>
-            <a href="#fitur" className="hover:text-blue-600 transition-colors">Fitur</a>
-            <a href="#cara-kerja" className="hover:text-blue-600 transition-colors">Cara Kerja</a>
-            <Link href="/generator" className="rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-transform hover:bg-slate-800 hover:scale-105 active:scale-95">
-              Coba AI Gratis
+
+          {/* Menu Desktop */}
+          <div className="hidden md:flex items-center gap-8">
+            <nav className="flex items-center gap-8 font-medium text-sm text-slate-500">
+              <a href="#beranda" className="hover:text-slate-900 transition-colors">Beranda</a>
+              <a href="#fitur" className="hover:text-slate-900 transition-colors">Fitur</a>
+              <a href="#cara-kerja" className="hover:text-slate-900 transition-colors">Cara Kerja</a>
+            </nav>
+            
+            {/* Garis Pemisah (Divider) */}
+            <div className="h-5 w-px bg-slate-200"></div>
+            
+            {/* Area Autentikasi (Login/Register) */}
+            <div className="flex items-center gap-4">
+              <Link href="/auth" className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors px-2">
+                Masuk
+              </Link>
+              <Link href="/auth" className="rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-slate-800 active:scale-95 flex items-center gap-2">
+                Daftar Gratis
+              </Link>
+            </div>
+          </div>
+
+          {/* Menu Mobile (Sederhana) */}
+          <div className="md:hidden flex items-center gap-4">
+            <Link href="/auth" className="text-sm font-bold text-slate-900">
+              Masuk
             </Link>
-          </nav>
+          </div>
+
         </div>
       </header>
 
@@ -74,12 +128,12 @@ export default function Home() {
           <div className="absolute top-10 left-1/2 -z-10 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-blue-500/20 blur-[120px]"></div>
           
           <FadeIn className="max-w-4xl text-center">
-            <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-blue-200/50 bg-blue-50/50 px-5 py-2 text-sm font-semibold text-blue-700 shadow-sm backdrop-blur-sm">
+            <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-blue-200/50 bg-blue-50/50 px-5 py-2 text-xs font-bold uppercase tracking-widest text-blue-700 shadow-sm backdrop-blur-sm">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
               </span>
-              Platform AI Skripsi Generator #1 di Indonesia
+              Platform AI Skripsi #1 di Indonesia
             </div>
             
             <h1 className="mb-8 text-5xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-7xl">
@@ -90,17 +144,16 @@ export default function Home() {
             </h1>
             
             <p className="mx-auto mb-10 max-w-2xl text-lg font-medium text-slate-500 sm:text-xl leading-relaxed">
-              Tinggalkan cara lama yang bikin pusing. Maululus hadir dengan asisten AI Khusus generate Skripsi , Maululus siap membantumu menemukan ide judul, menyusun kerangka, hingga menulis skripsi 10x lebih cepat dari generate AI biasa.
+              Tinggalkan cara lama yang bikin pusing. Maululus hadir dengan asisten AI Khusus generate Skripsi, siap membantumu menemukan ide judul, menyusun kerangka, hingga menulis skripsi 10x lebih cepat dari AI biasa.
             </p>
             
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link href="/generator" className="w-full flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-8 py-4 text-lg font-semibold text-white shadow-xl shadow-blue-600/20 transition-all hover:bg-blue-700 hover:-translate-y-1 sm:w-auto">
+              <Link href="/generator" className="w-full flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-8 py-4 text-sm font-bold text-white shadow-xl shadow-blue-600/20 transition-all hover:bg-blue-700 hover:-translate-y-1 sm:w-auto uppercase tracking-wide">
                 Mulai Generate Judul
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
               </Link>
-              <a href="#fitur" className="w-full flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-8 py-4 text-lg font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50 sm:w-auto">
+              <a href="#fitur" className="w-full flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-8 py-4 text-sm font-bold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50 sm:w-auto uppercase tracking-wide">
                 Eksplor Fitur
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
               </a>
             </div>
           </FadeIn>
@@ -136,7 +189,7 @@ export default function Home() {
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
                 </div>
                 <h3 className="text-xl font-bold mb-3 text-slate-100">Takut Plagiasi (Turnitin)</h3>
-                <p className="text-slate-400 leading-relaxed text-sm">Kesulitan memparafrase kalimat dari jurnal referensi, takut ketahuan *copy-paste* saat dicek Turnitin oleh kampus.</p>
+                <p className="text-slate-400 leading-relaxed text-sm">Kesulitan memparafrase kalimat dari jurnal referensi, takut ketahuan copy-paste saat dicek Turnitin oleh kampus.</p>
               </FadeIn>
             </div>
           </div>
@@ -155,7 +208,7 @@ export default function Home() {
             {/* Fitur 1: Kiri Gambar, Kanan Teks */}
             <div className="flex flex-col lg:flex-row items-center gap-16 mb-28">
               <FadeIn delay={100} className="w-full lg:w-1/2">
-                <div className="aspect-square rounded-[2.5rem] bg-gradient-to-br from-blue-50 to-slate-50 border border-slate-200/60 shadow-2xl shadow-slate-200/50 flex items-center justify-center relative overflow-hidden">
+                <div className="aspect-square rounded-[2.5rem] bg-gradient-to-br from-blue-50 to-slate-50 border border-slate-200/60 shadow-xl flex items-center justify-center relative overflow-hidden">
                    <div className="absolute inset-0 bg-blue-500/5 backdrop-blur-3xl"></div>
                    <div className="relative z-10 text-blue-600">
                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="w-40 h-40"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
@@ -163,8 +216,8 @@ export default function Home() {
                 </div>
               </FadeIn>
               <FadeIn delay={300} className="w-full lg:w-1/2 space-y-6">
-                <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                  <div className="h-1.5 w-1.5 rounded-full bg-blue-600"></div> Fitur Tersedia
+                <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 uppercase tracking-widest">
+                  <div className="h-1.5 w-1.5 rounded-full bg-blue-600"></div> Tersedia
                 </div>
                 <h3 className="text-3xl font-extrabold text-slate-900 sm:text-4xl tracking-tight">Generator Judul Anti-Pasaran</h3>
                 <p className="text-lg text-slate-500 leading-relaxed">
@@ -190,8 +243,8 @@ export default function Home() {
             {/* Fitur 2: Kiri Teks, Kanan Gambar */}
             <div className="flex flex-col-reverse lg:flex-row items-center gap-16 mb-28">
               <FadeIn delay={300} className="w-full lg:w-1/2 space-y-6">
-                <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                  <div className="h-1.5 w-1.5 rounded-full bg-slate-400"></div> Segera Hadir
+                <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  <div className="h-1.5 w-1.5 rounded-full bg-slate-400"></div> Tersedia
                 </div>
                 <h3 className="text-3xl font-extrabold text-slate-900 sm:text-4xl tracking-tight">Penyusun Kerangka (Outline)</h3>
                 <p className="text-lg text-slate-500 leading-relaxed">
@@ -199,7 +252,7 @@ export default function Home() {
                 </p>
               </FadeIn>
               <FadeIn delay={100} className="w-full lg:w-1/2">
-                <div className="aspect-square rounded-[2.5rem] bg-gradient-to-br from-slate-100 to-slate-50 border border-slate-200/60 shadow-2xl shadow-slate-200/50 flex items-center justify-center relative overflow-hidden">
+                <div className="aspect-square rounded-[2.5rem] bg-gradient-to-br from-slate-100 to-slate-50 border border-slate-200/60 shadow-xl flex items-center justify-center relative overflow-hidden">
                    <div className="relative z-10 text-slate-400">
                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="w-40 h-40"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="9" x2="9" y1="21" y2="9"/></svg>
                    </div>
@@ -210,15 +263,15 @@ export default function Home() {
             {/* Fitur 3: Kiri Gambar, Kanan Teks */}
             <div className="flex flex-col lg:flex-row items-center gap-16">
               <FadeIn delay={100} className="w-full lg:w-1/2">
-                <div className="aspect-square rounded-[2.5rem] bg-gradient-to-br from-slate-100 to-slate-50 border border-slate-200/60 shadow-2xl shadow-slate-200/50 flex items-center justify-center relative overflow-hidden">
+                <div className="aspect-square rounded-[2.5rem] bg-gradient-to-br from-slate-100 to-slate-50 border border-slate-200/60 shadow-xl flex items-center justify-center relative overflow-hidden">
                    <div className="relative z-10 text-slate-400">
                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="w-40 h-40"><rect width="18" height="10" x="3" y="11" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" x2="8" y1="16" y2="16"/><line x1="16" x2="16" y1="16" y2="16"/></svg>
                    </div>
                 </div>
               </FadeIn>
               <FadeIn delay={300} className="w-full lg:w-1/2 space-y-6">
-                <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                  <div className="h-1.5 w-1.5 rounded-full bg-slate-400"></div> Dalam Pengembangan
+                <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  <div className="h-1.5 w-1.5 rounded-full bg-slate-400"></div> Tersedia
                 </div>
                 <h3 className="text-3xl font-extrabold text-slate-900 sm:text-4xl tracking-tight">AI Copilot & Parafrase</h3>
                 <p className="text-lg text-slate-500 leading-relaxed">
@@ -231,9 +284,6 @@ export default function Home() {
 
         {/* 4. CARA KERJA SECTION */}
         <section id="cara-kerja" className="bg-slate-900 py-24 text-white relative overflow-hidden">
-          <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-blue-600/20 blur-3xl"></div>
-          <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-blue-800/20 blur-3xl"></div>
-          
           <div className="mx-auto max-w-7xl px-6 relative z-10">
             <FadeIn className="text-center mb-20">
               <h2 className="text-3xl font-extrabold sm:text-4xl tracking-tight">3 Langkah Menuju Wisuda</h2>
@@ -263,13 +313,13 @@ export default function Home() {
         </section>
 
         {/* 5. CTA (Call To Action) */}
-        <section className="py-32">
+        <section className="py-32 bg-white border-t border-slate-100">
           <div className="mx-auto max-w-3xl px-6 text-center">
             <FadeIn>
               <h2 className="text-4xl font-extrabold text-slate-900 mb-6 tracking-tight">Sudah Siap Pakai Toga?</h2>
-              <p className="text-xl text-slate-500 mb-10 leading-relaxed">Jangan biarkan skripsi menunda karir dan masa depanmu. Mulai temukan judulmu sekarang, tanpa biaya di awal.</p>
-              <Link href="/generator" className="inline-flex items-center gap-3 rounded-2xl bg-slate-900 px-10 py-5 text-lg font-semibold text-white shadow-xl shadow-slate-900/20 transition-all hover:bg-slate-800 hover:-translate-y-1 active:scale-95">
-                Coba Gratis Sekarang
+              <p className="text-xl text-slate-500 mb-10 leading-relaxed">Jangan biarkan skripsi menunda karir dan masa depanmu. Mulai temukan judulmu sekarang.</p>
+              <Link href="/auth" className="inline-flex items-center gap-3 rounded-2xl bg-slate-900 px-10 py-5 text-sm font-bold text-white shadow-xl shadow-slate-900/10 transition-all hover:bg-slate-800 active:scale-95 uppercase tracking-wide">
+                Daftar Akun Gratis
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
               </Link>
             </FadeIn>
@@ -279,9 +329,9 @@ export default function Home() {
       </main>
       
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white py-12 text-center">
+      <footer className="border-t border-slate-200 bg-slate-50 py-12 text-center">
         <p className="flex items-center justify-center gap-2 text-slate-500 font-medium text-sm">
-          © {new Date().getFullYear()} Maululus.com. Dibuat dengan 
+          © {new Date().getFullYear()} Maululus. Dibuat dengan 
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-slate-300">
             <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
           </svg>
