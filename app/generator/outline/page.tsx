@@ -112,7 +112,7 @@ function OutlineContent() {
         {isLoading && (
           <div className="rounded-3xl border border-slate-200 bg-white p-16 text-center shadow-sm mt-8">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600 mx-auto mb-4"></div>
-            <p className="text-slate-800 font-bold text-lg">Menyusun Kerangka BAB 1 - 5...</p>
+            <p className="text-slate-800 font-bold text-lg">Menyusun Kerangka BAB 1 - 5 & Referensi...</p>
           </div>
         )}
 
@@ -121,12 +121,29 @@ function OutlineContent() {
             <div className="space-y-10 max-h-[600px] overflow-hidden opacity-90 pr-4">
               {hasilOutline.map((item, idx) => (
                 <div key={idx} className="space-y-4">
-                  <h3 className="text-2xl font-extrabold text-blue-800 border-b-2 border-blue-100 pb-2 inline-block">{item.bab}</h3>
+                  {/* Gaya visual berbeda untuk BAB Referensi agar lebih stand out */}
+                  <h3 className={`text-2xl font-extrabold border-b-2 pb-2 inline-block ${item.bab.includes('REFERENSI') || item.bab.includes('📚') ? 'text-amber-600 border-amber-200' : 'text-blue-800 border-blue-100'}`}>
+                    {item.bab}
+                  </h3>
                   <div className="space-y-4 pl-2">
                     {item.subBab?.map((sub, sIdx) => (
-                      <div key={sIdx} className="space-y-1">
+                      <div key={sIdx} className="space-y-2">
                         <h4 className="font-bold text-slate-800 text-lg">{sub.judul}</h4>
-                        <p className="text-slate-600 leading-relaxed text-sm">{sub.deskripsi}</p>
+                        <p className="text-slate-600 leading-relaxed text-sm mb-2">{sub.deskripsi}</p>
+                        
+                        {/* TOMBOL GOOGLE SCHOLAR */}
+                        <a 
+                          href={`https://scholar.google.com/scholar?q=${encodeURIComponent(judul + ' ' + sub.judul)}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50/50 hover:bg-blue-100 border border-blue-100 px-3 py-1.5 rounded-lg transition-all w-fit"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                          </svg>
+                          Cari Referensi di Google Scholar
+                        </a>
+
                       </div>
                     ))}
                   </div>

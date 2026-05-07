@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-
 export const runtime = 'edge';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -16,16 +15,16 @@ export async function POST(req: Request) {
 
     const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' });
 
-    // PROMPT BARU: Memaksa AI membuat array subBab yang terpisah
+    // PROMPT BARU: Ditambah instruksi wajib untuk Rekomendasi Jurnal & Link Google Scholar
     const promptText = `
-      Kamu adalah asisten akademik ahli. Buatkan kerangka skripsi (outline) detail dan terstruktur dari BAB 1 hingga BAB 5 untuk skripsi dengan judul: "${judul}".
+      Kamu adalah Profesor dan Dosen Pembimbing Skripsi ahli. Buatkan kerangka skripsi (outline) detail dari BAB 1 hingga BAB 5, dan SATU BAB TAMBAHAN berisi Rekomendasi Jurnal untuk skripsi dengan judul: "${judul}".
       
       ATURAN PENTING:
-      Balas HANYA dengan format JSON Array yang berisi object. 
+      Balas HANYA dengan format JSON Array yang berisi object. Tidak boleh ada teks markdown di luar JSON.
       Setiap object mewakili satu Bab, dan WAJIB memiliki properti "bab" dan array "subBab".
-      Setiap item di dalam "subBab" harus memiliki "judul" (misal: 1.1 Latar Belakang) dan "deskripsi" (penjelasan singkat isi sub bab tersebut dalam 2-3 kalimat).
+      Setiap item di dalam "subBab" harus memiliki "judul" dan "deskripsi" (penjelasan singkat 2-3 kalimat).
       
-      Formatnya harus persis seperti ini tanpa ada teks lain atau markdown:
+      Formatnya harus persis seperti ini:
       [
         {
           "bab": "BAB 1: PENDAHULUAN",
@@ -33,30 +32,35 @@ export async function POST(req: Request) {
             {
               "judul": "1.1 Latar Belakang Masalah",
               "deskripsi": "Berisi fenomena kesenjangan antara harapan dan kenyataan terkait topik..."
-            },
-            {
-              "judul": "1.2 Rumusan Masalah",
-              "deskripsi": "Berisi pertanyaan-pertanyaan penelitian yang akan dijawab..."
             }
           ]
         },
+        ... (lanjutkan BAB 2, BAB 3, BAB 4, BAB 5 secara lengkap dan logis),
         {
-          "bab": "BAB 2: TINJAUAN PUSTAKA",
+          "bab": "📚 REKOMENDASI LITERATUR & REFERENSI JURNAL",
           "subBab": [
             {
-              "judul": "2.1 Landasan Teori",
-              "deskripsi": "Menguraikan teori utama dan pendukung yang relevan dengan topik..."
+              "judul": "1. Grand Theory (Teori Utama)",
+              "deskripsi": "Sebutkan 1-2 teori utama yang wajib dipakai (Misal: Technology Acceptance Model, dll) yang mendasari penelitian ini."
+            },
+            {
+              "judul": "2. Rekomendasi Jurnal Terkait (Penulis, Tahun)",
+              "deskripsi": "Sebutkan 3 judul jurnal spesifik yang sangat relevan. Keyword Pencarian: [Tulis Keyword 1], [Tulis Keyword 2]. Cari langsung di: https://scholar.google.com/scholar?q=[Keyword+Pencarian+Utama+Tanpa+Spasi]"
+            },
+            {
+              "judul": "💡 Catatan Penting Untuk Mahasiswa",
+              "deskripsi": "Silakan salin kata kunci (keyword) di atas atau klik link Google Scholar yang disediakan untuk mengunduh PDF jurnal aslinya sebagai referensi Bab 2 kamu."
             }
           ]
         }
       ]
-      (Lanjutkan sampai BAB 5 secara lengkap, detail, dan logis sesuai judul).
     `;
 
     const result = await model.generateContent(promptText);
     const response = await result.response;
     const textOutput = response.text();
 
+    // Membersihkan markdown JSON (jika AI membandel menambahkannya)
     const cleanJsonString = textOutput.replace(/```json/g, '').replace(/```/g, '').trim();
     const outlineArray = JSON.parse(cleanJsonString);
 

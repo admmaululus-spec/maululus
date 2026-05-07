@@ -153,7 +153,6 @@ function DokumenContent() {
       </header>
 
       {/* KERTAS DOKUMEN (Dioptimalkan untuk Print) */}
-      {/* print:shadow-none print:p-0 menghilangkan bayangan dan padding agar pas di kertas asli */}
       <main className="max-w-4xl mx-auto px-6 pt-10 print:pt-0 print:px-0">
         <div className="bg-white rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 p-8 sm:p-14 print:border-none print:shadow-none print:rounded-none print:p-0">
           
@@ -170,7 +169,7 @@ function DokumenContent() {
           <div className="space-y-12 print:space-y-6">
             {outline.map((item, index) => (
               <div key={index} className="space-y-6 print:space-y-4">
-                <h2 className="text-2xl font-extrabold text-blue-800 border-b-2 border-blue-100 pb-2 inline-block print:text-black print:border-b-0 print:border-black print:pb-1">
+                <h2 className={`text-2xl font-extrabold border-b-2 pb-2 inline-block print:text-black print:border-b-0 print:border-black print:pb-1 ${item.bab.includes('REFERENSI') || item.bab.includes('📚') ? 'text-amber-600 border-amber-200' : 'text-blue-800 border-blue-100'}`}>
                   {item.bab}
                 </h2>
                 
@@ -179,9 +178,22 @@ function DokumenContent() {
                     // print:bg-transparent menghilangkan background abu-abu saat di PDF
                     <div key={subIdx} className="bg-slate-50/80 rounded-2xl p-5 sm:p-6 border border-slate-100 print:bg-transparent print:border-none print:p-0">
                       <h3 className="text-lg font-bold text-slate-800 mb-2 print:text-black">{sub.judul}</h3>
-                      <p className="text-slate-600 leading-relaxed text-justify text-sm sm:text-base print:text-black">
+                      <p className="text-slate-600 leading-relaxed text-justify text-sm sm:text-base print:text-black mb-3">
                         {sub.deskripsi}
                       </p>
+
+                      {/* TOMBOL GOOGLE SCHOLAR - Sembunyi saat diprint */}
+                      <a 
+                        href={`https://scholar.google.com/scholar?q=${encodeURIComponent(judulTarget + ' ' + sub.judul)}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50/50 hover:bg-blue-100 border border-blue-100 px-3 py-1.5 rounded-lg transition-all w-fit print:hidden"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                        </svg>
+                        Cari Referensi di Google Scholar
+                      </a>
                     </div>
                   ))}
                 </div>
