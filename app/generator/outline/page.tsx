@@ -5,7 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase'; // Import supabase!
 import Link from 'next/link';
 
-type SubBab = { judul: string; deskripsi: string };
+// UPDATE: Tambahkan url_asli (opsional) di type SubBab
+type SubBab = { judul: string; deskripsi: string; url_asli?: string };
 type OutlineData = { bab: string; subBab: SubBab[] };
 
 function OutlineContent() {
@@ -112,7 +113,7 @@ function OutlineContent() {
         {isLoading && (
           <div className="rounded-3xl border border-slate-200 bg-white p-16 text-center shadow-sm mt-8">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600 mx-auto mb-4"></div>
-            <p className="text-slate-800 font-bold text-lg">Menyusun Kerangka BAB 1 - 5 & Referensi...</p>
+            <p className="text-slate-800 font-bold text-lg">Menyusun Kerangka BAB 1 - 5 & Referensi Asli...</p>
           </div>
         )}
 
@@ -131,18 +132,30 @@ function OutlineContent() {
                         <h4 className="font-bold text-slate-800 text-lg">{sub.judul}</h4>
                         <p className="text-slate-600 leading-relaxed text-sm mb-2">{sub.deskripsi}</p>
                         
-                        {/* TOMBOL GOOGLE SCHOLAR */}
-                        <a 
-                          href={`https://scholar.google.com/scholar?q=${encodeURIComponent(judul + ' ' + sub.judul)}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50/50 hover:bg-blue-100 border border-blue-100 px-3 py-1.5 rounded-lg transition-all w-fit"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                          </svg>
-                          Cari Referensi di Google Scholar
-                        </a>
+                        {/* LOGIKA TOMBOL JURNAL ASLI / GOOGLE SCHOLAR */}
+                        {sub.url_asli ? (
+                          <a 
+                            href={sub.url_asli} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50/50 hover:bg-emerald-100 border border-emerald-100 px-3 py-1.5 rounded-lg transition-all w-fit"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>
+                            Buka Jurnal Asli
+                          </a>
+                        ) : (
+                          <a 
+                            href={`https://scholar.google.com/scholar?q=${encodeURIComponent(judul + ' ' + sub.judul)}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50/50 hover:bg-blue-100 border border-blue-100 px-3 py-1.5 rounded-lg transition-all w-fit"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                            </svg>
+                            Cari Referensi di Google Scholar
+                          </a>
+                        )}
 
                       </div>
                     ))}
