@@ -26,7 +26,7 @@ export async function POST(req: Request) {
       ${masalah ? `Masalah/Fenomena: "${masalah}".` : ''}
       ${metodologi && metodologi !== 'Bebas (AI yang tentukan)' ? `Metodologi wajib: "${metodologi}".` : ''}
       
-      Kriteria Ketat: Tingkat kedalaman WAJIB disesuaikan untuk ${jenisKarya || 'S1 - Skripsi'}. Hindari judul klise yang sudah menumpuk di perpustakaan kampus tersebut.
+      Kriteria Ketat: Tingkat kedalaman WAJIB disesuaikan untuk ${jenisKarya || 'S1 - Skripsi'}. Hindari judul klise yang sudah menumpuk di perpustakaan kampus tersebut, namun hindari juga penggunaan kata yang tidak lazim terutama untuk skripsi S-1 buat lebih mudah untuk acc ke dosen.
 
       ATURAN BALASAN (WAJIB JSON FORMAT MURNI):
       Jika JURUSAN TIDAK VALID, balas dengan format ini:

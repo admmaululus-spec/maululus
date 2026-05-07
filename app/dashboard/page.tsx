@@ -159,8 +159,8 @@ export default function DashboardPage() {
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
             
             <div className="mb-10">
-              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Halo, {userEmail?.split('@')[0]} 👋</h1>
-              <p className="text-slate-500 text-sm mt-2 font-medium">Lanjutkan progres skripsimu hari ini dan segera wisuda.</p>
+              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Halo, {userEmail?.split('@')[0]}</h1>
+              <p className="text-slate-500 text-sm mt-2 font-medium">Lanjutkan progress disini dan segera lulus.</p>
             </div>
 
             {/* Quick Actions Grid */}
