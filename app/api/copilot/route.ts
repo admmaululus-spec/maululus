@@ -8,27 +8,31 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(req: Request) {
   try {
-    const { text, action } = await req.json();
+    // Menangkap konteks tambahan (judulSkripsi, namaBab) dari frontend
+    const { text, action, judulSkripsi, namaBab } = await req.json();
 
     if (!text || text.trim() === '') {
       return NextResponse.json({ error: 'Teks tidak boleh kosong' }, { status: 400 });
     }
 
     // Menggunakan 1.5 Flash agar kuota aman dan respon secepat kilat
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     let promptText = '';
+
+    // Konteks pintar: Memberitahu AI tentang topik skripsi yang sedang dikerjakan
+    const konteks = `Judul Skripsi: "${judulSkripsi}". Sedang menulis bagian: "${namaBab}".\n\n`;
 
     // Menentukan prompt AI berdasarkan tombol yang diklik user
     switch (action) {
       case 'paraphrase':
-        promptText = `Kamu adalah dosen pembimbing ahli. Lakukan parafrase pada teks berikut agar lebih unik, terhindar dari plagiarisme (Turnitin), namun WAJIB menjaga makna aslinya. Gunakan bahasa Indonesia baku, akademis, dan hindari gaya bahasa robot.\n\nTeks asli:\n"${text}"\n\nBalas langsung dengan hasil parafrase tanpa teks pembuka/penutup.`;
+        promptText = `Kamu adalah dosen pembimbing ahli. ${konteks}Lakukan parafrase pada teks berikut agar lebih unik, terhindar dari plagiarisme (Turnitin), namun WAJIB menjaga makna aslinya. Gunakan bahasa Indonesia baku, akademis, dan hindari gaya bahasa robot.\n\nTeks asli:\n"${text}"\n\nBalas langsung dengan hasil parafrase tanpa teks pembuka/penutup.`;
         break;
       case 'expand':
-        promptText = `Kamu adalah dosen pembimbing ahli. Kembangkan teks atau poin-poin singkat berikut menjadi 1 atau 2 paragraf utuh yang kohesif, sangat mendetail, dan menggunakan gaya bahasa akademis skripsi.\n\nTeks asli:\n"${text}"\n\nBalas langsung dengan hasil pengembangan tanpa teks pembuka/penutup.`;
+        promptText = `Kamu adalah dosen pembimbing ahli. ${konteks}Kembangkan teks atau poin-poin singkat berikut menjadi 1 atau 2 paragraf utuh yang kohesif, sangat mendetail, dan menggunakan gaya bahasa akademis skripsi.\n\nTeks asli:\n"${text}"\n\nBalas langsung dengan hasil pengembangan tanpa teks pembuka/penutup.`;
         break;
       case 'formalize':
-        promptText = `Kamu adalah editor jurnal ilmiah. Perbaiki tata bahasa, ejaan (PUEBI), dan struktur kalimat pada teks berikut agar menjadi bahasa Indonesia yang sangat baku, profesional, dan pantas untuk masuk ke dalam dokumen skripsi/tesis.\n\nTeks asli:\n"${text}"\n\nBalas langsung dengan hasil perbaikan tanpa teks pembuka/penutup.`;
+        promptText = `Kamu adalah editor jurnal ilmiah. ${konteks}Perbaiki tata bahasa, ejaan (PUEBI), dan struktur kalimat pada teks berikut agar menjadi bahasa Indonesia yang sangat baku, profesional, dan pantas untuk masuk ke dalam dokumen skripsi/tesis.\n\nTeks asli:\n"${text}"\n\nBalas langsung dengan hasil perbaikan tanpa teks pembuka/penutup.`;
         break;
       default:
         return NextResponse.json({ error: 'Aksi tidak dikenali' }, { status: 400 });

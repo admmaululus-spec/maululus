@@ -5,16 +5,6 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase'; 
 import Link from 'next/link';
 
-const Tooltip = ({ text, children }: { text: string; children: React.ReactNode }) => (
-  <div className="group relative flex items-center">
-    {children}
-    <div className="absolute bottom-full mb-2 hidden group-hover:block w-48 p-2 bg-slate-800 text-white text-[10px] rounded-lg shadow-xl z-50 pointer-events-none leading-relaxed text-center">
-      {text}
-      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
-    </div>
-  </div>
-);
-
 type RiwayatItem = { id: string; judul: string; outline: any; is_unlocked: boolean; created_at: string };
 
 export default function DashboardPage() {
@@ -59,8 +49,6 @@ export default function DashboardPage() {
       
      if (!userData) {
        const metaWhatsapp = session.user.user_metadata?.whatsapp || '';
-       
-       // --- TAMBAHKAN EMAIL DI SINI ---
        const { data: newUser } = await supabase.from('users_data').insert({ 
          id: userId, 
          koin: 1, 
@@ -68,14 +56,11 @@ export default function DashboardPage() {
          whatsapp: metaWhatsapp,
          email: session.user.email 
        }).select('*').single();
-       
        userData = newUser;
      } else {
-       // JIKA USER SUDAH ADA TAPI EMAILNYA MASIH KOSONG (KARENA DIA USER LAMA), KITA UPDATE
        let updates: any = {};
        if (!userData.email && session.user.email) updates.email = session.user.email;
        if (!userData.whatsapp && session.user.user_metadata?.whatsapp) updates.whatsapp = session.user.user_metadata.whatsapp;
-
        if (Object.keys(updates).length > 0) {
          await supabase.from('users_data').update(updates).eq('id', userId);
          userData = { ...userData, ...updates };
@@ -84,8 +69,6 @@ export default function DashboardPage() {
       // Pasang ke State
       setKoin(userData?.koin || 0);
       setIsPro(userData?.is_pro || false);
-      
-      // Jika tetap kosong (misal login via Google), tampilkan teks ramah
       setUserWhatsapp(userData?.whatsapp ? userData.whatsapp : 'Belum diatur (Login via Google)');
 
       // 3. AMBIL RIWAYAT SKRIPSI
@@ -118,131 +101,204 @@ export default function DashboardPage() {
     setIsProcessing(null);
   };
 
-  if (isLoading) return <div className="min-h-screen bg-white flex items-center justify-center"><div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-slate-900"></div></div>;
+  if (isLoading) return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600"></div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="text-xl font-bold tracking-tight text-slate-900 uppercase">Maululus</div>
+    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-20 selection:bg-blue-200">
+      
+      {/* HEADER ELEGAN */}
+      <header className="bg-white/70 backdrop-blur-xl border-b border-slate-200/60 sticky top-0 z-50 transition-all">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="text-xl font-extrabold tracking-tight text-blue-700">Mau<span className="text-blue-500">lulus</span></div>
+            <div className="h-4 w-px bg-slate-300 mx-1"></div>
             {isPro ? (
-              <span className="rounded border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-600 uppercase tracking-tighter">Pro Plan</span>
+              <span className="flex items-center gap-1 rounded-full bg-gradient-to-r from-indigo-500 to-blue-600 px-2.5 py-0.5 text-[10px] font-bold text-white uppercase tracking-widest shadow-sm">
+                Pro
+              </span>
             ) : (
-              <span className="rounded border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Free</span>
+              <span className="rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Basic</span>
             )}
           </div>
-          <div className="flex items-center gap-6">
-            <span className="text-sm font-bold text-slate-700">🪙 {koin} Koin</span>
-            <button onClick={handleLogout} className="text-xs font-semibold text-slate-400 hover:text-red-600 transition-colors">Keluar</button>
+          <div className="flex items-center gap-5">
+            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-full shadow-sm">
+              <span className="text-sm">🪙</span>
+              <span className="text-xs font-bold text-amber-700">{koin} Koin</span>
+            </div>
+            <button onClick={handleLogout} className="text-xs font-bold text-slate-400 hover:text-red-600 transition-colors">Keluar</button>
           </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-10">
         
-        {/* TAB NAVIGATION */}
-        <div className="flex border-b border-slate-200 mb-10">
-          <button 
-            onClick={() => setActiveTab('overview')}
-            className={`pb-4 px-2 mr-8 text-sm font-bold uppercase tracking-widest transition-colors ${activeTab === 'overview' ? 'border-b-2 border-slate-900 text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
-          >
-            Overview
-          </button>
-          <button 
-            onClick={() => setActiveTab('profil')}
-            className={`pb-4 px-2 text-sm font-bold uppercase tracking-widest transition-colors ${activeTab === 'profil' ? 'border-b-2 border-slate-900 text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
-          >
-            Profil Akun
-          </button>
+        {/* NAVIGASI TAB PILL (SaaS Style) */}
+        <div className="flex justify-center md:justify-start mb-10">
+          <div className="inline-flex bg-slate-200/50 p-1 rounded-2xl">
+            <button 
+              onClick={() => setActiveTab('overview')}
+              className={`px-6 py-2 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === 'overview' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Overview
+            </button>
+            <button 
+              onClick={() => setActiveTab('profil')}
+              className={`px-6 py-2 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === 'profil' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Profil Akun
+            </button>
+          </div>
         </div>
 
-        
+        {/* ================= TAB 1: OVERVIEW ================= */}
         {activeTab === 'overview' && (
-          <div className="animate-in fade-in duration-300">
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+            
             <div className="mb-10">
-              <h1 className="text-2xl font-bold text-slate-900">Halo, {userEmail?.split('@')[0]} 👋</h1>
-              <p className="text-slate-500 text-sm mt-1">Lanjutkan progres skripsimu hari ini.</p>
+              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Halo, {userEmail?.split('@')[0]} 👋</h1>
+              <p className="text-slate-500 text-sm mt-2 font-medium">Lanjutkan progres skripsimu hari ini dan segera wisuda.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-              <Link href="/dashboard/upgrade" className="w-full block bg-slate-900 border border-slate-800 p-6 rounded-2xl text-white hover:bg-slate-800 transition-all shadow-sm">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 text-center">Billing</p>
-                <p className="text-center font-bold">Top-Up & Paket</p>
+            {/* Quick Actions Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-14">
+              
+              <Link href="/generator" className="group relative bg-white border border-slate-200/60 p-6 rounded-[2rem] shadow-sm hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 hover:border-blue-200 transition-all duration-300 overflow-hidden">
+                <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-24 h-24 text-blue-600"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
+                </div>
+                <div className="h-10 w-10 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Academic</p>
+                <p className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Buat Skripsi Baru</p>
               </Link>
-              <Link href="/generator" className="w-full block bg-white border border-slate-200 p-6 rounded-2xl hover:border-slate-400 transition-all shadow-sm">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 text-center">Academic</p>
-                <p className="text-center font-bold">Generate Judul</p>
+
+              <Link href="/dashboard/copilot" className="group relative bg-white border border-slate-200/60 p-6 rounded-[2rem] shadow-sm hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 hover:border-indigo-200 transition-all duration-300 overflow-hidden">
+                <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-24 h-24 text-indigo-600"><path d="M19.045 7.401c.378-.378.586-.88.586-1.414s-.208-1.036-.586-1.414l-1.586-1.586c-.378-.378-.88-.586-1.414-.586s-1.036.208-1.414.586l-1.586 1.586c-.378.378-.586.88-.586 1.414s.208 1.036.586 1.414l1.586 1.586c.378.378.88.586 1.414.586s1.036-.208 1.414-.586l1.586-1.586zM20.459 6.2c.2.2.2.51 0 .71l-1.586 1.586c-.2.2-.51.2-.71 0l-1.586-1.586c-.2-.2-.2-.51 0-.71l1.586-1.586c.2-.2.51-.2.71 0l1.586 1.586zM4 20h2.586L15.172 11.414 12.586 8.828 4 17.414V20z"/></svg>
+                </div>
+                <div className="h-10 w-10 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Writing Tool</p>
+                <p className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">AI Copilot</p>
               </Link>
-              <Link href="/dashboard/copilot" className="w-full block bg-white border border-slate-200 p-6 rounded-2xl hover:border-indigo-400 transition-all shadow-sm">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 mb-1 text-center">Writing Tool</p>
-                <p className="text-center font-bold text-indigo-600">AI Copilot</p>
+
+              <Link href="/dashboard/upgrade" className="group bg-slate-900 border border-slate-800 p-6 rounded-[2rem] shadow-lg hover:shadow-slate-900/20 hover:-translate-y-1 transition-all duration-300">
+                <div className="h-10 w-10 bg-slate-800 rounded-2xl flex items-center justify-center text-amber-400 mb-4 border border-slate-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Billing</p>
+                <p className="text-lg font-bold text-white group-hover:text-amber-400 transition-colors">Top-Up Koin</p>
               </Link>
             </div>
 
+            {/* Dokumen Tersimpan */}
             <section>
-              <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Dokumen Tersimpan</h2>
-              <div className="space-y-4">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Dokumen Skripsi Kamu</h2>
+                <span className="bg-slate-200/50 text-slate-500 text-[10px] font-bold px-2.5 py-1 rounded-lg">{riwayatList.length} File</span>
+              </div>
+              
+              <div className="space-y-3">
                 {riwayatList.length > 0 ? (
                   riwayatList.map((item) => (
-                    <div key={item.id} className="bg-white border border-slate-200 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4 hover:border-slate-300 transition-colors">
-                      <div className="flex-1">
-                        <h3 className="font-bold text-slate-800 leading-tight">{item.judul}</h3>
-                        <p className="text-[10px] text-slate-400 mt-2 font-medium uppercase tracking-tighter">Disimpan pada: {new Date(item.created_at).toLocaleDateString('id-ID')}</p>
+                    <div key={item.id} className="group bg-white border border-slate-200/60 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-blue-200 hover:shadow-sm transition-all duration-300">
+                      <div className="flex items-start gap-4 flex-1 min-w-0">
+                        <div className="h-10 w-10 shrink-0 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-blue-500 group-hover:bg-blue-50 transition-colors">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-slate-800 text-sm truncate">{item.judul}</h3>
+                          <p className="text-[10px] text-slate-400 mt-1 font-semibold uppercase tracking-widest">
+                            {new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </p>
+                        </div>
                       </div>
+
                       {item.is_unlocked ? (
-                        <button onClick={() => router.push(`/dashboard/dokumen?id=${item.id}`)} className="bg-slate-100 text-slate-900 px-6 py-2 rounded-lg text-xs font-bold hover:bg-slate-200 transition-all border border-slate-200 shrink-0">Buka Dokumen</button>
+                        <button onClick={() => router.push(`/dashboard/dokumen?id=${item.id}`)} className="w-full md:w-auto bg-slate-50 text-slate-700 px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-100 border border-slate-200 transition-all shrink-0 active:scale-95 text-center">
+                          Lihat Dokumen
+                        </button>
                       ) : (
-                        <button onClick={() => handleBukaKunci(item.id)} disabled={isProcessing === item.id} className="bg-slate-900 text-white px-6 py-2 rounded-lg text-xs font-bold hover:bg-slate-800 transition-all shrink-0">
-                          {isProcessing === item.id ? 'Memproses...' : 'Buka Kunci (1 Koin)'}
+                        <button onClick={() => handleBukaKunci(item.id)} disabled={isProcessing === item.id} className="w-full md:w-auto bg-slate-900 text-white px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-800 shadow-sm transition-all shrink-0 active:scale-95 disabled:opacity-70 text-center flex justify-center items-center gap-2">
+                          {isProcessing === item.id ? (
+                             <div className="h-3 w-3 animate-spin rounded-full border-2 border-slate-400 border-t-white"></div>
+                          ) : (
+                            <>
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5 text-amber-400"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                              Buka (1 Koin)
+                            </>
+                          )}
                         </button>
                       )}
                     </div>
                   ))
                 ) : (
-                  <div className="py-16 border-2 border-dashed border-slate-200 rounded-2xl text-center text-slate-400 text-sm font-medium">Belum ada dokumen skripsi.</div>
+                  <div className="py-20 bg-white border border-slate-200/60 border-dashed rounded-[2rem] text-center flex flex-col items-center justify-center">
+                    <div className="h-12 w-12 bg-slate-50 rounded-full flex items-center justify-center mb-4 text-slate-300">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m11.25 14.25a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9c0-1.242.75-2.25 1.875-2.25h.75m10.5 12.75h-3m-3 0h-3m-3 0H6.75" /></svg>
+                    </div>
+                    <p className="text-slate-500 font-medium text-sm">Belum ada skripsi yang dibuat.</p>
+                    <Link href="/generator" className="mt-4 text-xs font-bold text-blue-600 hover:text-blue-700">Mulai generate sekarang &rarr;</Link>
+                  </div>
                 )}
               </div>
             </section>
           </div>
         )}
 
-        
+        {/* ================= TAB 2: PROFIL ================= */}
         {activeTab === 'profil' && (
-          <div className="animate-in fade-in duration-300 max-w-2xl">
-            <div className="bg-white border border-slate-200 rounded-[2rem] p-8 sm:p-10 shadow-sm">
-              <h2 className="text-xl font-bold text-slate-900 mb-8 border-b border-slate-100 pb-4">Informasi Akun</h2>
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 max-w-2xl mx-auto md:mx-0">
+            <div className="bg-white border border-slate-200/60 rounded-[2.5rem] p-8 sm:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+              
+              <div className="flex items-center gap-4 mb-10 pb-6 border-b border-slate-100">
+                <div className="h-16 w-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-black shadow-inner">
+                  {userEmail?.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="text-xl font-extrabold text-slate-900">{userEmail?.split('@')[0]}</h2>
+                  <p className="text-sm text-slate-500 font-medium">Mahasiswa Akhir</p>
+                </div>
+              </div>
               
               <div className="space-y-6">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Email Address</label>
-                  <div className="flex items-center justify-between bg-slate-50 px-5 py-4 rounded-xl border border-slate-100">
-                    <span className="font-semibold text-slate-800">{userEmail}</span>
-                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest">Verified</span>
+                  <div className="flex items-center justify-between bg-slate-50 px-5 py-4 rounded-2xl border border-slate-100">
+                    <span className="font-semibold text-slate-800 text-sm">{userEmail}</span>
+                    <span className="bg-green-100 text-green-700 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest">Terverifikasi</span>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">WhatsApp</label>
-                  <div className="flex items-center bg-slate-50 px-5 py-4 rounded-xl border border-slate-100">
-                    <span className="font-semibold text-slate-800">{userWhatsapp}</span>
+                  <div className="flex items-center bg-slate-50 px-5 py-4 rounded-2xl border border-slate-100">
+                    <span className="font-semibold text-slate-800 text-sm">{userWhatsapp}</span>
                   </div>
                 </div>
 
                 <div className="pt-4 grid grid-cols-2 gap-4">
-                  <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5">
-                    <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Status Paket</p>
-                    <p className="text-lg font-black text-indigo-700">{isPro ? 'PRO SCHOLAR' : 'FREE ACCOUNT'}</p>
+                  <div className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200/60 rounded-2xl p-6">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status Langganan</p>
+                    <p className={`text-lg font-black ${isPro ? 'text-indigo-600' : 'text-slate-700'}`}>
+                      {isPro ? 'PRO PLAN' : 'BASIC FREE'}
+                    </p>
                   </div>
-                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Koin Tersedia</p>
-                    <p className="text-lg font-black text-slate-700">{koin} Koin</p>
+                  <div className="bg-amber-50 border border-amber-100 rounded-2xl p-6">
+                    <p className="text-[10px] font-bold text-amber-500/70 uppercase tracking-widest mb-1">Koin Tersedia</p>
+                    <p className="text-lg font-black text-amber-600">{koin} Koin</p>
                   </div>
                 </div>
 
-                <div className="pt-8 border-t border-slate-100 mt-8 flex justify-end">
-                  <Link href="/dashboard/upgrade" className="bg-slate-900 text-white font-bold py-3 px-6 rounded-xl hover:bg-slate-800 transition-all text-sm">
-                    Tingkatkan Layanan
+                <div className="pt-8 mt-4 flex justify-end">
+                  <Link href="/dashboard/upgrade" className="bg-slate-900 text-white font-bold py-3.5 px-8 rounded-2xl hover:bg-slate-800 transition-all text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0">
+                    Kelola Tagihan & Paket
                   </Link>
                 </div>
               </div>
