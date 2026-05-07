@@ -2,17 +2,22 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { supabase } from '@/app/lib/supabase'; // Import supabase!
+import { supabase } from '@/app/lib/supabase';
 import Link from 'next/link';
 
-// UPDATE: Tambahkan url_asli (opsional) di type SubBab
 type SubBab = { judul: string; deskripsi: string; url_asli?: string };
 type OutlineData = { bab: string; subBab: SubBab[] };
 
 function OutlineContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  
+  // Mengambil parameter judul dan jenis dari URL
   const judul = searchParams.get('judul');
+  const jenisRaw = searchParams.get('jenis') || 'Skripsi'; // Default 'Skripsi' jika kosong
+  
+  // Memastikan huruf pertama selalu kapital (misal: "jurnal" jadi "Jurnal")
+  const jenis = jenisRaw.charAt(0).toUpperCase() + jenisRaw.slice(1);
 
   const [isLoading, setIsLoading] = useState(true);
   const [hasilOutline, setHasilOutline] = useState<OutlineData[]>([]);
@@ -27,7 +32,6 @@ function OutlineContent() {
       return;
     }
 
-    // Fungsi cek user
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setIsLoggedIn(!!session);
@@ -54,13 +58,11 @@ function OutlineContent() {
     fetchOutline();
   }, [judul, router]);
 
-  // LOGIKA BARU: Simpan langsung ke Supabase dengan Error Handling
   const handleSaveAndContinue = async () => {
     if (isLoggedIn) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          // BUG FIX: Gunakan .maybeSingle() agar tidak error jika data kosong
           const { data: checkExist } = await supabase
             .from('history_skripsi')
             .select('id')
@@ -68,7 +70,6 @@ function OutlineContent() {
             .eq('judul', judul)
             .maybeSingle(); 
 
-          // Jika belum ada, masukkan ke Supabase
           if (!checkExist) {
             const { error: insertError } = await supabase.from('history_skripsi').insert({
               user_id: session.user.id,
@@ -77,7 +78,7 @@ function OutlineContent() {
               is_unlocked: false
             });
             
-            if (insertError) throw insertError; // Tangkap jika ada error saat insert
+            if (insertError) throw insertError;
           }
           router.push('/dashboard');
           return;
@@ -85,12 +86,13 @@ function OutlineContent() {
       } catch (error: any) {
         console.error("Gagal simpan ke database:", error);
         alert("Terjadi kesalahan saat menyimpan ke cloud. Coba lagi.");
-        return; // Hentikan agar tidak lanjut ke Auth
+        return;
       }
     } 
     
-    // Jika BELUM LOGIN, titipkan ke Local Storage sebagai "Draft"
+    // Jika belum login, simpan ke draft
     localStorage.setItem('maululus_pending_judul', judul as string);
+    localStorage.setItem('maululus_pending_jenis', jenis); // Simpan juga jenisnya
     localStorage.setItem('maululus_pending_outline', JSON.stringify(hasilOutline));
     router.push('/auth');
   };
@@ -106,7 +108,10 @@ function OutlineContent() {
 
         <div className="rounded-3xl bg-blue-600 p-8 text-white shadow-lg relative overflow-hidden">
           <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/30 rounded-full blur-3xl -mr-10 -mt-10"></div>
-          <p className="text-blue-200 font-medium mb-2 relative z-10">Judul Skripsi Pilihanmu:</p>
+          
+          {/* TEKS DINAMIS SESUAI PILIHAN (SKRIPSI / TESIS / JURNAL) */}
+          <p className="text-blue-200 font-medium mb-2 relative z-10">Judul {jenis} Pilihanmu:</p>
+          
           <h1 className="text-2xl sm:text-3xl font-extrabold leading-snug relative z-10">{judul}</h1>
         </div>
 
@@ -122,7 +127,6 @@ function OutlineContent() {
             <div className="space-y-10 max-h-[600px] overflow-hidden opacity-90 pr-4">
               {hasilOutline.map((item, idx) => (
                 <div key={idx} className="space-y-4">
-                  {/* Gaya visual berbeda untuk BAB Referensi agar lebih stand out */}
                   <h3 className={`text-2xl font-extrabold border-b-2 pb-2 inline-block ${item.bab.includes('REFERENSI') || item.bab.includes('📚') ? 'text-amber-600 border-amber-200' : 'text-blue-800 border-blue-100'}`}>
                     {item.bab}
                   </h3>
@@ -132,7 +136,6 @@ function OutlineContent() {
                         <h4 className="font-bold text-slate-800 text-lg">{sub.judul}</h4>
                         <p className="text-slate-600 leading-relaxed text-sm mb-2">{sub.deskripsi}</p>
                         
-                        {/* LOGIKA TOMBOL JURNAL ASLI / GOOGLE SCHOLAR */}
                         {sub.url_asli ? (
                           <a 
                             href={sub.url_asli} 
@@ -170,10 +173,9 @@ function OutlineContent() {
                 <div className="text-5xl mb-4">🔒</div>
                 <h4 className="text-2xl font-extrabold text-white mb-2">Simpan & Buka Akses</h4>
                 <p className="text-slate-400 text-sm mb-8 leading-relaxed">
-                  Gunakan <span className="font-bold text-amber-400">1 Koin</span> untuk membuka struktur detail dari BAB 1 - BAB 5 beserta fitur Copy/Download.
+                  Gunakan <span className="font-bold text-amber-400">1 Koin</span> untuk membuka struktur detail beserta fitur Copy/Download.
                 </p>
                 
-                {/* Tombol Pintar Baru */}
                 <button 
                   onClick={handleSaveAndContinue}
                   className="w-full rounded-2xl bg-amber-400 px-6 py-4 font-bold text-slate-900 hover:bg-amber-500 transition-all shadow-lg shadow-amber-500/20 active:scale-95 flex justify-center items-center gap-2"

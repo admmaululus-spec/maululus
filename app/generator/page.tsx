@@ -79,7 +79,15 @@ export default function GeneratorPage() {
     // Simpan data ke local storage untuk digunakan di halaman outline
     localStorage.setItem('form_universitas', universitas);
     localStorage.setItem('form_jurusan', jurusan);
-    router.push(`/generator/outline?judul=${encodeURIComponent(judulDipilih)}`);
+
+    // LOGIKA BARU: Bersihkan jenis karya (misal "S1 - Skripsi" menjadi "Skripsi")
+    let jenisClean = jenisKarya;
+    if (jenisKarya.includes('-')) {
+      jenisClean = jenisKarya.split('-')[1].trim();
+    }
+
+    // Lempar parameter judul DAN jenis ke halaman outline
+    router.push(`/generator/outline?judul=${encodeURIComponent(judulDipilih)}&jenis=${encodeURIComponent(jenisClean)}`);
   };
 
   return (
