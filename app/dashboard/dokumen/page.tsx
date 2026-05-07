@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import Link from 'next/link';
 
-// UPDATE: Tambahkan url_asli (opsional) di type SubBab
 type SubBab = { judul: string; deskripsi: string; url_asli?: string };
 type OutlineData = { bab: string; subBab: SubBab[] };
 
@@ -17,6 +16,12 @@ function DokumenContent() {
   const [judulTarget, setJudulTarget] = useState<string>('');
   const [outline, setOutline] = useState<OutlineData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // States untuk AI Copilot
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  const [activeSub, setActiveSub] = useState<{judul: string, deskripsi: string} | null>(null);
+  const [copilotResult, setCopilotResult] = useState('');
+  const [isProcessingAI, setIsProcessingAI] = useState(false);
 
   useEffect(() => {
     if (!idSkripsi) {
@@ -54,14 +59,40 @@ function DokumenContent() {
     fetchDokumen();
   }, [idSkripsi, router]);
 
-  // 1. FUNGSI COPY TEXT (Asli)
+  // Fungsi Panggil AI Copilot
+  const handleAICall = async (action: 'paraphrase' | 'expand' | 'formalize') => {
+    if (!activeSub) return;
+    setIsProcessingAI(true);
+    setCopilotResult('');
+    
+    try {
+      const res = await fetch('/api/copilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: activeSub.deskripsi,
+          action,
+          judulSkripsi: judulTarget,
+          namaBab: activeSub.judul
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setCopilotResult(data.result);
+    } catch (err: any) {
+      alert(err.message || "Gagal menghubungi AI Copilot.");
+    } finally {
+      setIsProcessingAI(false);
+    }
+  };
+
+  // 1. FUNGSI COPY TEXT
   const handleCopy = () => {
     let textToCopy = `JUDUL SKRIPSI:\n${judulTarget}\n\n`;
     outline.forEach(item => {
       textToCopy += `${item.bab}\n`;
       item.subBab?.forEach(sub => {
         textToCopy += `\n${sub.judul}\n${sub.deskripsi}\n`;
-        // Tambahkan link asli saat di-copy (opsional tapi bagus)
         if (sub.url_asli) textToCopy += `Link: ${sub.url_asli}\n`;
       });
       textToCopy += `\n----------------------------------------\n\n`;
@@ -72,7 +103,6 @@ function DokumenContent() {
 
   // 2. FUNGSI DOWNLOAD WORD (.doc)
   const handleDownloadWord = () => {
-    // Membuat struktur HTML yang dikenali oleh Microsoft Word
     let htmlContent = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
@@ -108,12 +138,10 @@ function DokumenContent() {
       </body></html>
     `;
 
-    // Mengubah HTML menjadi file MS Word (Blob)
     const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    // Bersihkan judul untuk nama file (buang karakter aneh)
     const safeJudul = judulTarget.replace(/[^a-z0-9]/gi, '_').substring(0, 30);
     link.download = `Skripsi_${safeJudul}.doc`;
     
@@ -122,7 +150,7 @@ function DokumenContent() {
     document.body.removeChild(link);
   };
 
-  // 3. FUNGSI DOWNLOAD PDF (Memicu window.print)
+  // 3. FUNGSI DOWNLOAD PDF
   const handleDownloadPDF = () => {
     window.print();
   };
@@ -130,10 +158,9 @@ function DokumenContent() {
   if (isLoading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900"></div></div>;
 
   return (
-    // Class "print:bg-white" memastikan background jadi putih murni saat di-print ke PDF
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-24 print:bg-white print:pb-0">
       
-      {/* HEADER NAVIGASI (Disembunyikan saat cetak PDF menggunakan print:hidden) */}
+      {/* HEADER NAVIGASI */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50 print:hidden">
         <div className="max-w-5xl mx-auto px-6 h-auto py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <Link href="/dashboard" className="text-slate-500 hover:text-blue-600 font-semibold flex items-center gap-2 self-start sm:self-center">
@@ -141,7 +168,6 @@ function DokumenContent() {
             Kembali
           </Link>
           
-          {/* Grup Tombol Aksi */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button onClick={handleCopy} className="flex-1 sm:flex-none justify-center text-sm font-bold bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl hover:bg-slate-200 transition-colors flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
@@ -159,7 +185,7 @@ function DokumenContent() {
         </div>
       </header>
 
-      {/* KERTAS DOKUMEN (Dioptimalkan untuk Print) */}
+      {/* KERTAS DOKUMEN */}
       <main className="max-w-4xl mx-auto px-6 pt-10 print:pt-0 print:px-0">
         <div className="bg-white rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 p-8 sm:p-14 print:border-none print:shadow-none print:rounded-none print:p-0">
           
@@ -182,37 +208,48 @@ function DokumenContent() {
                 
                 <div className="space-y-4 print:space-y-2">
                   {item.subBab?.map((sub, subIdx) => (
-                    // print:bg-transparent menghilangkan background abu-abu saat di PDF
-                    <div key={subIdx} className="bg-slate-50/80 rounded-2xl p-5 sm:p-6 border border-slate-100 print:bg-transparent print:border-none print:p-0">
+                    <div key={subIdx} className="group bg-slate-50/80 rounded-2xl p-5 sm:p-6 border border-slate-100 hover:border-blue-200 transition-all print:bg-transparent print:border-none print:p-0">
                       <h3 className="text-lg font-bold text-slate-800 mb-2 print:text-black">{sub.judul}</h3>
-                      <p className="text-slate-600 leading-relaxed text-justify text-sm sm:text-base print:text-black mb-3">
+                      <p className="text-slate-600 leading-relaxed text-justify text-sm sm:text-base print:text-black mb-4">
                         {sub.deskripsi}
                       </p>
 
-                      {/* LOGIKA TOMBOL JURNAL ASLI / GOOGLE SCHOLAR - Sembunyi saat diprint */}
-                      {sub.url_asli ? (
-                        <a 
-                          href={sub.url_asli} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50/50 hover:bg-emerald-100 border border-emerald-100 px-3 py-1.5 rounded-lg transition-all w-fit print:hidden"
+                      <div className="flex flex-wrap gap-2 print:hidden">
+                        {/* TOMBOL AI COPILOT */}
+                        <button 
+                          onClick={() => { setActiveSub(sub); setIsCopilotOpen(true); setCopilotResult(''); }}
+                          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>
-                          Buka Jurnal Asli
-                        </a>
-                      ) : (
-                        <a 
-                          href={`https://scholar.google.com/scholar?q=${encodeURIComponent(judulTarget + ' ' + sub.judul)}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50/50 hover:bg-blue-100 border border-blue-100 px-3 py-1.5 rounded-lg transition-all w-fit print:hidden"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                          </svg>
-                          Cari Referensi di Google Scholar
-                        </a>
-                      )}
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5"><path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0Z" /></svg>
+                          ✨ AI Copilot
+                        </button>
+
+                        {/* TOMBOL JURNAL ASLI / GOOGLE SCHOLAR */}
+                        {sub.url_asli ? (
+                          <a 
+                            href={sub.url_asli} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50/50 hover:bg-emerald-100 border border-emerald-100 px-3 py-1.5 rounded-lg transition-all w-fit"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>
+                            Buka Jurnal Asli
+                          </a>
+                        ) : (
+                          <a 
+                            href={`https://scholar.google.com/scholar?q=${encodeURIComponent(judulTarget + ' ' + sub.judul)}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50/50 hover:bg-blue-100 border border-blue-100 px-3 py-1.5 rounded-lg transition-all w-fit"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                            </svg>
+                            Cari Referensi di Google Scholar
+                          </a>
+                        )}
+                      </div>
+                      
                     </div>
                   ))}
                 </div>
@@ -226,6 +263,75 @@ function DokumenContent() {
           </div>
         </div>
       </main>
+
+      {/* ================= MODAL AI COPILOT ================= */}
+      {isCopilotOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+            
+            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div>
+                <h4 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                  <span className="text-2xl">✨</span> AI Copilot
+                </h4>
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">{activeSub?.judul}</p>
+              </div>
+              <button onClick={() => setIsCopilotOpen(false)} className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-white transition-colors text-slate-400 hover:text-slate-900 border border-transparent hover:border-slate-200">✕</button>
+            </div>
+
+            <div className="p-8 overflow-y-auto space-y-8">
+              {/* OPSI TINDAKAN */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { id: 'paraphrase', label: 'Parafrase', icon: '🔄', color: 'blue' },
+                  { id: 'expand', label: 'Kembangkan', icon: '📝', color: 'indigo' },
+                  { id: 'formalize', label: 'Formalize', icon: '🎓', color: 'emerald' },
+                ].map((opt) => (
+                  <button 
+                    key={opt.id}
+                    onClick={() => handleAICall(opt.id as any)}
+                    disabled={isProcessingAI}
+                    className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50 transition-all group disabled:opacity-50"
+                  >
+                    <span className="text-2xl group-hover:scale-110 transition-transform">{opt.icon}</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-600">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* HASIL GENERATE */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Hasil Penulisan AI</label>
+                <div className="min-h-[200px] bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl p-6 relative">
+                  {isProcessingAI ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600"></div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase animate-pulse">Sedang Berpikir...</p>
+                    </div>
+                  ) : copilotResult ? (
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                      <p className="text-slate-800 text-sm leading-relaxed whitespace-pre-wrap">{copilotResult}</p>
+                      <button 
+                        onClick={() => { navigator.clipboard.writeText(copilotResult); alert("Tersalin ke clipboard!"); }}
+                        className="mt-6 w-full py-3 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-all flex justify-center items-center gap-2 active:scale-95"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>
+                        Salin Hasil Tulisan
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-slate-400 text-xs italic text-center px-4">Pilih salah satu tindakan di atas untuk mulai menulis secara otomatis berdasarkan konteks sub-bab ini.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
