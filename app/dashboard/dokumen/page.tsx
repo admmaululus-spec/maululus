@@ -59,7 +59,6 @@ function DokumenContent() {
     fetchDokumen();
   }, [idSkripsi, router]);
 
-  // Fungsi Panggil AI Copilot
   const handleAICall = async (action: 'paraphrase' | 'expand' | 'formalize') => {
     if (!activeSub) return;
     setIsProcessingAI(true);
@@ -86,7 +85,6 @@ function DokumenContent() {
     }
   };
 
-  // 1. FUNGSI COPY TEXT
   const handleCopy = () => {
     let textToCopy = `JUDUL SKRIPSI:\n${judulTarget}\n\n`;
     outline.forEach(item => {
@@ -101,7 +99,6 @@ function DokumenContent() {
     alert('Dokumen berhasil disalin!');
   };
 
-  // 2. FUNGSI DOWNLOAD WORD (.doc)
   const handleDownloadWord = () => {
     let htmlContent = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
@@ -150,17 +147,21 @@ function DokumenContent() {
     document.body.removeChild(link);
   };
 
-  // 3. FUNGSI DOWNLOAD PDF
   const handleDownloadPDF = () => {
     window.print();
   };
 
   if (isLoading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900"></div></div>;
 
+  // Ikon-ikon profesional pengganti Emoji
+  const iconParafrase = <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>;
+  const iconExpand = <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>;
+  const iconFormalize = <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.83M11.42 15.17l-.496.496c-.452.453-1.127.57-1.748.29L6.5 14.75 4.5 16.75A1.5 1.5 0 012.38 14.63l2-2-1.21-2.67c-.28-.621-.162-1.296.29-1.748l.496-.496m7.464 7.464l-7.464-7.464m14.928 0v-3.75M21 7.5c0-1.154-.741-2.146-1.782-2.438a22.091 22.091 0 00-6.438-1.062 22.092 22.092 0 00-6.438 1.062C5.305 5.354 4.5 6.296 4.5 7.5v3.75" /></svg>;
+  const iconSparkles = <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" /></svg>;
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-24 print:bg-white print:pb-0">
       
-      {/* HEADER NAVIGASI */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50 print:hidden">
         <div className="max-w-5xl mx-auto px-6 h-auto py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <Link href="/dashboard" className="text-slate-500 hover:text-blue-600 font-semibold flex items-center gap-2 self-start sm:self-center">
@@ -185,7 +186,6 @@ function DokumenContent() {
         </div>
       </header>
 
-      {/* KERTAS DOKUMEN */}
       <main className="max-w-4xl mx-auto px-6 pt-10 print:pt-0 print:px-0">
         <div className="bg-white rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 p-8 sm:p-14 print:border-none print:shadow-none print:rounded-none print:p-0">
           
@@ -203,7 +203,7 @@ function DokumenContent() {
             {outline.map((item, index) => (
               <div key={index} className="space-y-6 print:space-y-4">
                 <h2 className={`text-2xl font-extrabold border-b-2 pb-2 inline-block print:text-black print:border-b-0 print:border-black print:pb-1 ${item.bab.includes('REFERENSI') || item.bab.includes('📚') ? 'text-amber-600 border-amber-200' : 'text-blue-800 border-blue-100'}`}>
-                  {item.bab}
+                  {item.bab.replace('📚', '').trim()} {/* Menghapus emoji buku di judul utama */}
                 </h2>
                 
                 <div className="space-y-4 print:space-y-2">
@@ -215,13 +215,13 @@ function DokumenContent() {
                       </p>
 
                       <div className="flex flex-wrap gap-2 print:hidden">
-                        {/* TOMBOL AI COPILOT */}
+                        {/* TOMBOL AI COPILOT YANG SUDAH BERSIH DARI EMOJI */}
                         <button 
                           onClick={() => { setActiveSub(sub); setIsCopilotOpen(true); setCopilotResult(''); }}
                           className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5"><path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0Z" /></svg>
-                          ✨ AI Copilot
+                          {iconSparkles}
+                          AI Copilot
                         </button>
 
                         {/* TOMBOL JURNAL ASLI / GOOGLE SCHOLAR */}
@@ -230,7 +230,7 @@ function DokumenContent() {
                             href={sub.url_asli} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50/50 hover:bg-emerald-100 border border-emerald-100 px-3 py-1.5 rounded-lg transition-all w-fit"
+                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50/50 hover:bg-emerald-100 border border-emerald-100 px-3 py-1.5 rounded-lg transition-all w-fit print:hidden"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>
                             Buka Jurnal Asli
@@ -240,7 +240,7 @@ function DokumenContent() {
                             href={`https://scholar.google.com/scholar?q=${encodeURIComponent(judulTarget + ' ' + sub.judul)}`} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50/50 hover:bg-blue-100 border border-blue-100 px-3 py-1.5 rounded-lg transition-all w-fit"
+                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50/50 hover:bg-blue-100 border border-blue-100 px-3 py-1.5 rounded-lg transition-all w-fit print:hidden"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -269,31 +269,39 @@ function DokumenContent() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
             
-            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+            <div className="p-6 sm:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div>
                 <h4 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                  <span className="text-2xl">✨</span> AI Copilot
+                  {/* Ikon Sparkles menggantikan emoji ✨ di header */}
+                  <span className="text-indigo-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" /></svg>
+                  </span>
+                  AI Copilot
                 </h4>
                 <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">{activeSub?.judul}</p>
               </div>
-              <button onClick={() => setIsCopilotOpen(false)} className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-white transition-colors text-slate-400 hover:text-slate-900 border border-transparent hover:border-slate-200">✕</button>
+              <button onClick={() => setIsCopilotOpen(false)} className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-white transition-colors text-slate-400 hover:text-slate-900 border border-transparent hover:border-slate-200">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
             </div>
 
-            <div className="p-8 overflow-y-auto space-y-8">
-              {/* OPSI TINDAKAN */}
+            <div className="p-6 sm:p-8 overflow-y-auto space-y-8">
+              {/* OPSI TINDAKAN TANPA EMOJI */}
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { id: 'paraphrase', label: 'Parafrase', icon: '🔄', color: 'blue' },
-                  { id: 'expand', label: 'Kembangkan', icon: '📝', color: 'indigo' },
-                  { id: 'formalize', label: 'Formalize', icon: '🎓', color: 'emerald' },
+                  { id: 'paraphrase', label: 'Parafrase', icon: iconParafrase, color: 'blue' },
+                  { id: 'expand', label: 'Kembangkan', icon: iconExpand, color: 'indigo' },
+                  { id: 'formalize', label: 'Formalize', icon: iconFormalize, color: 'emerald' },
                 ].map((opt) => (
                   <button 
                     key={opt.id}
                     onClick={() => handleAICall(opt.id as any)}
                     disabled={isProcessingAI}
-                    className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50 transition-all group disabled:opacity-50"
+                    className={`flex flex-col items-center gap-2 p-4 rounded-2xl border border-slate-200 hover:border-${opt.color}-400 hover:bg-${opt.color}-50 transition-all group disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:border-slate-200 bg-white shadow-sm`}
                   >
-                    <span className="text-2xl group-hover:scale-110 transition-transform">{opt.icon}</span>
+                    <span className={`text-slate-500 group-hover:text-${opt.color}-600 group-hover:scale-110 transition-transform duration-300`}>
+                      {opt.icon}
+                    </span>
                     <span className="text-[10px] font-black uppercase tracking-wider text-slate-600">{opt.label}</span>
                   </button>
                 ))}
