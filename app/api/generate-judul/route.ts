@@ -1,70 +1,86 @@
-import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-export const runtime = 'edge';
+import type { Metadata } from "next";
+import { Poppins } from "next/font/google";
+import "./globals.css";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+// Konfigurasi Font Poppins
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"], // Normal hingga Extrabold
+  variable: "--font-poppins",
+  display: "swap",
+});
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    const { universitas, jurusan, minat, masalah, metodologi, jenisKarya } = body;
+// 1. UPDATE METADATA (SEO Dasar & OpenGraph)
+export const metadata: Metadata = {
+  title: "Maululus — Asisten AI untuk Skripsi & Penelitian",
+  description: "Maululus membantu mahasiswa menemukan judul skripsi, menyusun proposal, mencari referensi jurnal, dan membangun kerangka penelitian lebih cepat dengan bantuan AI.",
+  keywords: [
+    "AI Skripsi", 
+    "Generator Judul Skripsi", 
+    "Asisten Penelitian AI", 
+    "Cara Cepat Lulus Skripsi", 
+    "Outline Skripsi", 
+    "Parafrase Turnitin"
+  ],
+  openGraph: {
+    title: "Maululus — Asisten AI untuk Skripsi & Penelitian",
+    description: "Bantu temukan judul, susun proposal, dan kerangka penelitian lebih cepat dengan AI.",
+    url: "https://maululus.com", // Ganti dengan domain aslimu nanti
+    siteName: "Maululus",
+    locale: "id_ID",
+    type: "website",
+  },
+};
 
-    if (!jurusan || !universitas) {
-      return NextResponse.json({ error: 'Universitas dan Jurusan harus diisi' }, { status: 400 });
-    }
-
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' });
-
-    const promptText = `
-      Kamu adalah Dosen Penguji Senior sekaligus asisten akademik ahli di ${universitas}.
-      
-      Tugas Pertamamu: Analisis input program studi/jurusan berikut: "${jurusan}".
-      Jika input tersebut typo parah, tidak masuk akal (misal: "makan nasi", "asdfg"), di luar konteks akademik, atau bukan nama jurusan yang lazim, kamu WAJIB menolak dan memberikan teguran.
-      
-      Tugas Keduamu: Jika jurusan valid, buatkan 3 ide judul untuk ${jenisKarya || 'S1 - Skripsi'} yang inovatif dan ANTI-PASARAN khusus untuk standar ${universitas}.
-      ${minat ? `Topik spesifik/minat: "${minat}".` : ''}
-      ${masalah ? `Masalah/Fenomena: "${masalah}".` : ''}
-      ${metodologi && metodologi !== 'Bebas (AI yang tentukan)' ? `Metodologi wajib: "${metodologi}".` : ''}
-      
-      Kriteria Ketat: Tingkat kedalaman WAJIB disesuaikan untuk ${jenisKarya || 'S1 - Skripsi'}. Hindari judul klise yang sudah menumpuk di perpustakaan kampus tersebut, namun hindari juga penggunaan kata yang tidak lazim terutama untuk skripsi S-1 buat lebih mudah untuk acc ke dosen.
-
-      ATURAN BALASAN (WAJIB JSON FORMAT MURNI):
-      Jika JURUSAN TIDAK VALID, balas dengan format ini:
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  
+  // 2. SCHEMA MARKUP (JSON-LD) UNTUK MEMANCING SITELINKS ("Sub-menu" di Google)
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Maululus",
+    "url": "https://maululus.com", // Ganti dengan domain aslimu nanti
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://maululus.com/search?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    },
+    "hasPart": [
       {
-        "status": "invalid",
-        "pesan": "Tuliskan pesan teguran halus. Contoh: 'Hmm, sepertinya [input] bukan nama program studi yang wajar. Apakah maksudmu jurusan terkait?'"
-      }
-
-      Jika JURUSAN VALID, balas dengan format ini:
+        "@type": "WebPage",
+        "name": "Generator Judul",
+        "url": "https://maululus.com/generator"
+      },
       {
-        "status": "success",
-        "data": [
-          {
-            "judul": "Judul Skripsi 1",
-            "alasan": "Alasan akademis yang meyakinkan mengapa judul ini sangat relevan dan menarik.",
-            "novelty_check": "Analisis kebaruan: Jelaskan secara singkat kenapa judul ini belum banyak diteliti di ${universitas} atau apa pembedanya dari skripsi terdahulu."
-          }
-        ]
+        "@type": "WebPage",
+        "name": "AI Copilot",
+        "url": "https://maululus.com/dashboard/copilot"
+      },
+      {
+        "@type": "WebPage",
+        "name": "Daftar Gratis",
+        "url": "https://maululus.com/auth"
       }
-      
-      Keluarkan HANYA format JSON murni, tanpa backticks (\`\`\`), tanpa teks pembuka/penutup.
-    `;
+    ]
+  };
 
-    const result = await model.generateContent(promptText);
-    const textOutput = await result.response.text();
-
-    try {
-      // Membersihkan potensi markdown code blocks dari AI sebelum parse
-      const cleanJsonString = textOutput.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsedData = JSON.parse(cleanJsonString);
-      return NextResponse.json(parsedData);
-    } catch (parseError) {
-      console.error("Gagal parse JSON dari AI:", textOutput);
-      return NextResponse.json({ error: `Format balasan AI salah atau tidak mengenali instruksi JSON.` }, { status: 500 });
-    }
-
-  } catch (error: any) {
-    console.error('Error server API:', error);
-    return NextResponse.json({ error: `Pesan Error Server: ${error.message || 'Unknown Error'}` }, { status: 500 });
-  }
+  return (
+    // 3. UBAH LANG="EN" JADI "ID" UNTUK SEO LOKAL INDONESIA
+    <html lang="id" className="scroll-smooth">
+      <head>
+        {/* Menyuntikkan JSON-LD ke dalam Head */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
+      <body className={`${poppins.variable} font-sans antialiased text-slate-900 bg-slate-50`}>
+        {children}
+      </body>
+    </html>
+  );
 }
