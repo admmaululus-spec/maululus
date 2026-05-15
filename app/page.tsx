@@ -145,7 +145,7 @@ export default function Home() {
             </h1>
             
             <p className="mx-auto mb-10 max-w-2xl text-lg font-medium text-slate-500 sm:text-xl leading-relaxed">
-              Tinggalkan cara lama yang bikin pusing. Maululus hadir dengan asisten AI Khusus generate Skripsi, siap membantumu menemukan ide judul, menyusun kerangka, hingga menulis skripsi 10x lebih cepat dari AI biasa.
+              Udah Mau Lulus ya ?. Maululus membantu mahasiswa menemukan judul skripsi, menyusun proposal, mencari referensi jurnal, dan membangun kerangka penelitian lebih cepat dengan bantuan AI.
             </p>
             
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
