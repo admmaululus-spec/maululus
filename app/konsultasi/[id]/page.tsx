@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from "react";
 import imageCompression from "browser-image-compression";
 import { supabase } from "@/app/lib/supabase"; // Import instance supabase yang sudah kamu buat
+export const runtime = 'edge';
 
 export default function ChatTimeline({ params }: { params: Promise<{ id: string }> }) {
   // Gunakan 'use' untuk unwrap Promise params di Next.js App Router terbaru
@@ -13,6 +14,8 @@ export default function ChatTimeline({ params }: { params: Promise<{ id: string 
   const [input, setInput] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+
+ 
 
   // Ambil ID User dan Pesan awal saat komponen dimuat
   useEffect(() => {
