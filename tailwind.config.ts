@@ -8,9 +8,15 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // TAMBAHKAN BAGIAN INI
       fontFamily: {
         sans: ['var(--font-poppins)', 'sans-serif'],
+      },
+      colors: {
+        brand: {
+          navy: "#0B2342",
+          emerald: "#16A34A",
+          light: "#F8FAFC",
+        }
       },
     },
   },
