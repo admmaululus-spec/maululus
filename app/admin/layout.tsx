@@ -6,7 +6,7 @@ import { supabase } from '@/app/lib/supabase';
 import Link from 'next/link';
 
 // ⚠️ GANTI DENGAN EMAIL ASLIMU 
-const ADMIN_EMAILS = ['admin@maululus.com', 'emailkamu@gmail.com']; 
+const ADMIN_EMAILS = ['vianeyricky@gmail.com', 'emailkamu@gmail.com']; 
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();

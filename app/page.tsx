@@ -51,7 +51,7 @@ export default function Home() {
   const router = useRouter();
 
   // ⚠️ DAFTAR EMAIL ADMIN
-  const ADMIN_EMAILS = ['admin@maululus.com', 'emailkamu@gmail.com']; 
+  const ADMIN_EMAILS = ['vianeyricky@gmail.com', 'emailkamu@gmail.com']; 
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
