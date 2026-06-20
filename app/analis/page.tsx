@@ -39,39 +39,67 @@ export default function UserAnalystCatalog() {
   }, []);
 
   const handleStartChat = async (analyst: Analyst) => {
-    setIsProcessing(true);
+    setIsProcessing(true); // Ubah tombol jadi "Memproses..."
     
     // 1. Cek User Session
     const { data: { session } } = await supabase.auth.getSession();
+    
+    // JIKA BELUM LOGIN: Langsung arahkan ke halaman auth secara senyap
     if (!session) {
-      alert("Silakan login terlebih dahulu untuk memulai konsultasi.");
       router.push('/auth');
-      return;
+      return; 
     }
+
     const userId = session.user.id;
 
     // 2. Cek Koin & Validasi
-    const { data: userProfile } = await supabase.from('profiles').select('koin').eq('id', userId).single();
-    if (!userProfile) {
-      alert("Gagal memuat profil Anda.");
-      setIsProcessing(false); return;
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('koin')
+      .eq('id', userId)
+      .single();
+
+    // Jika sesi nyangkut tapi data di database tidak ada (seperti di screenshot Anda)
+    if (profileError || !userProfile) {
+      alert("Sesi tidak valid. Silakan login ulang.");
+      await supabase.auth.signOut(); // Bersihkan sesi yang error
+      setIsProcessing(false); // Kembalikan tombol ke "Mulai Konsultasi"
+      router.push('/auth');
+      return;
     }
+
     if (userProfile.koin < analyst.price) {
       alert(`Koin tidak cukup! Butuh ${analyst.price} koin, sisa koin Anda: ${userProfile.koin}.`);
-      setIsProcessing(false); return;
+      setIsProcessing(false); // Kembalikan tombol
+      return;
     }
 
     // 3. Potong Koin
-    const { error: updateError } = await supabase.from('profiles').update({ koin: userProfile.koin - analyst.price }).eq('id', userId);
-    if (updateError) { alert("Terjadi kesalahan sistem."); setIsProcessing(false); return; }
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ koin: userProfile.koin - analyst.price })
+      .eq('id', userId);
+      
+    if (updateError) { 
+      alert("Terjadi kesalahan sistem saat memotong koin."); 
+      setIsProcessing(false); // Kembalikan tombol
+      return; 
+    }
 
-    // 4. Buat Sesi & Arahkan
+    // 4. Buat Sesi & Arahkan ke Ruang Chat
     const { data: chatSession, error: chatError } = await supabase
       .from('chat_sessions')
       .insert([{ user_id: userId, analyst_id: analyst.id, payment_status: 'paid', stage: 'Baru Mulai' }])
-      .select().single();
+      .select()
+      .single();
 
-    if (chatError) { alert("Gagal membuat ruang chat."); setIsProcessing(false); return; }
+    if (chatError) { 
+      alert("Gagal membuat ruang chat."); 
+      setIsProcessing(false); // Kembalikan tombol
+      return; 
+    }
+    
+    // Sukses! Lanjut ke ruang chat
     router.push(`/chat/${chatSession.id}`);
   };
 

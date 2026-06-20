@@ -92,8 +92,18 @@ export default function Home() {
               <a href="#fitur" className="hover:text-[#0f2a4a] transition-colors">Fitur</a>
               <a href="#cara-kerja" className="hover:text-[#0f2a4a] transition-colors">Cara Kerja</a>
               {/* Menu Analis Baru */}
-              <Link href="/analis" className="text-green-600 font-bold hover:text-green-700 transition-colors">Analis</Link>
+              <a href="/analis" className="hover:text-[#0f2a4a] transition-colors">Analis</a>
+              <Link 
+  href="/auth" 
+  className="inline-flex items-center gap-2 bg-[#0D1C2E] hover:bg-blue-600 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all shadow-md hover:shadow-lg active:scale-95"
+>
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+  </svg>
+  Login User/Analis/Admin
+</Link>
             </nav>
+            
             
             {/* Garis Pemisah (Divider) */}
             <div className="h-5 w-px bg-slate-200"></div>

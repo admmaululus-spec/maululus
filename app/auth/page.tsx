@@ -9,9 +9,6 @@ export default function AuthPage() {
   const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
   
-  // ⚠️ DAFTAR EMAIL ADMIN (Sesuaikan dengan email milikmu)
-  const ADMIN_EMAILS = ['admin@maululus.com', 'emailkamu@gmail.com']; 
-  
   // States Form
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState(''); 
@@ -39,7 +36,8 @@ export default function AuthPage() {
     try {
       if (isLogin) {
         // --- PROSES LOGIN ---
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
+        
         if (error) {
           if (error.message.includes('Email not confirmed')) {
             // Tampilkan tombol resend jika email belum diverifikasi
@@ -50,11 +48,22 @@ export default function AuthPage() {
           throw error;
         }
 
-        // Cek Admin atau Bukan saat Login berhasil
-        if (email && ADMIN_EMAILS.includes(email)) {
-          router.push('/admin'); // Arahkan ke Ruang Kendali Admin
-        } else {
-          router.push('/dashboard'); // Arahkan Mahasiswa ke Dashboard
+        // ✨ SMART ROUTING: Cek Role dari Database setelah Login ✨
+        if (authData.session) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', authData.session.user.id)
+            .single();
+
+          // Arahkan ke pintu masuk masing-masing sesuai jabatannya
+          if (profile?.role === 'admin') {
+            router.push('/admin');
+          } else if (profile?.role === 'analyst') {
+            router.push('/analyst/dashboard'); // Arahkan ke UI Inbox Meta yang kita buat kemarin
+          } else {
+            router.push('/dashboard');
+          }
         }
 
       } else {
