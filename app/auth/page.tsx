@@ -49,22 +49,23 @@ export default function AuthPage() {
         }
 
         // ✨ SMART ROUTING: Cek Role dari Database setelah Login ✨
-        if (authData.session) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', authData.session.user.id)
-            .single();
+ // ✨ SMART ROUTING DENGAN HARD REDIRECT ✨
+ if (authData.session) {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', authData.session.user.id)
+    .single();
 
-          // Arahkan ke pintu masuk masing-masing sesuai jabatannya
-          if (profile?.role === 'admin') {
-            router.push('/admin');
-          } else if (profile?.role === 'analyst') {
-            router.push('/analyst/dashboard'); // Arahkan ke UI Inbox Meta yang kita buat kemarin
-          } else {
-            router.push('/dashboard');
-          }
-        }
+  // Gunakan window.location.href untuk mencegah router Next.js "nge-bug"
+  if (profile?.role === 'admin') {
+    window.location.href = '/admin'; 
+  } else if (profile?.role === 'analyst') {
+    window.location.href = '/analyst/dashboard'; 
+  } else {
+    window.location.href = '/dashboard';
+  }
+}
 
       } else {
         // --- PROSES REGISTER ---
