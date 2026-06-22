@@ -20,21 +20,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         return;
       }
 
-      // Hanya query ke tabel profiles
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', session.user.id)
         .single();
 
+      // 🔥 JIKA ERROR, TAMPILKAN ALERT DI LAYAR
       if (error) {
-        console.error("Error mengambil profile:", error.message);
+        alert("ERROR SUPABASE: " + error.message);
         router.replace('/dashboard');
         return;
       }
 
-      // Case-insensitive check
-      if (profile?.role?.toLowerCase() === 'admin') {
+      // 🔥 JIKA DATA TIDAK ADA, TAMPILKAN ALERT
+      if (!profile) {
+        alert("Data profile tidak ditemukan di database untuk user ini.");
+        router.replace('/dashboard');
+        return;
+      }
+
+      const role = profile.role?.toLowerCase();
+      alert("Role kamu adalah: " + role); // Lihat apa yang didapat dari DB
+
+      if (role === 'admin') {
         setIsAuthorized(true);
         setIsLoading(false);
       } else {
