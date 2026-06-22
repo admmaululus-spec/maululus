@@ -31,7 +31,7 @@ export default function AuthPage() {
     setIsLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
-    setShowResend(false); // Reset tombol resend
+    setShowResend(false);
 
     try {
       if (isLogin) {
@@ -40,7 +40,6 @@ export default function AuthPage() {
         
         if (error) {
           if (error.message.includes('Email not confirmed')) {
-            // Tampilkan tombol resend jika email belum diverifikasi
             setShowResend(true);
             setResendEmailTarget(email);
             throw new Error('Email belum dikonfirmasi. Silakan cek kotak masuk/spam email Anda.');
@@ -48,24 +47,32 @@ export default function AuthPage() {
           throw error;
         }
 
-             // ✨ SMART ROUTING ✨
-             if (authData.session) {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', authData.session.user.id)
-                .single();
-    
-              const role = profile?.role?.toLowerCase();
-    
-              if (role === 'admin') {
-                window.location.href = '/admin'; 
-              } else if (role === 'analyst' || role === 'analis') {
-                window.location.href = '/analisis/dashboard';
-              } else {
-                window.location.href = '/dashboard';
-              }
-            }
+        // ✨ SMART ROUTING ✨
+        if (authData.session) {
+          // Ambil profil beserta error-nya untuk debugging
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', authData.session.user.id)
+            .single();
+
+          if (profileError) {
+            console.error("Gagal mengambil profil (Cek RLS / Data tidak ada):", profileError);
+            router.replace('/dashboard'); // Fallback jika gagal baca role
+            return;
+          }
+
+          const role = profile?.role?.toLowerCase();
+
+          // Menggunakan router.replace agar user tidak bisa back ke halaman login
+          if (role === 'admin') {
+            router.replace('/admin'); 
+          } else if (role === 'analyst' || role === 'analis') {
+            router.replace('/admin/analis');
+          } else {
+            router.replace('/dashboard');
+          }
+        }
 
       } else {
         // --- PROSES REGISTER ---
@@ -85,13 +92,11 @@ export default function AuthPage() {
         if (error) throw error;
         
         setSuccessMsg('Pendaftaran berhasil! Silakan cek Email Anda untuk mengaktifkan akun.');
-        setIsLogin(true); // Pindah otomatis ke tampilan login
+        setIsLogin(true); 
         
-        // Munculkan opsi kirim ulang email untuk berjaga-jaga
         setShowResend(true);
         setResendEmailTarget(email);
         
-        // Bersihkan form
         setPassword('');
         setConfirmPassword('');
         setWhatsapp('');
@@ -118,7 +123,7 @@ export default function AuthPage() {
 
       if (error) throw error;
       setSuccessMsg(`Email konfirmasi telah dikirim ulang ke ${resendEmailTarget}. Silakan cek kotak masuk/spam.`);
-      setShowResend(false); // Sembunyikan tombol setelah berhasil dikirim
+      setShowResend(false); 
     } catch (error: any) {
       setErrorMsg(error.message || 'Gagal mengirim ulang email. Silakan coba beberapa saat lagi.');
     } finally {
@@ -134,7 +139,7 @@ export default function AuthPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          // Kita arahkan ke root '/' agar listener di app/page.tsx yang menyortir admin vs user
+          // Arahkan ke root agar listener global menyortir role
           redirectTo: `${window.location.origin}/`, 
         },
       });
@@ -177,7 +182,7 @@ export default function AuthPage() {
           </div>
         )}
 
-        {/* Fitur Kirim Ulang Email (Hanya Muncul jika dipicu) */}
+        {/* Fitur Kirim Ulang Email */}
         {showResend && (
           <button 
             type="button"
@@ -299,7 +304,7 @@ export default function AuthPage() {
               setSuccessMsg('');
               setPassword('');
               setConfirmPassword('');
-              setShowResend(false); // Reset fitur resend saat ganti mode
+              setShowResend(false);
             }}
             className="font-bold text-slate-900 hover:underline transition-all"
           >
