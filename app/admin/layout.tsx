@@ -26,24 +26,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         .eq('id', session.user.id)
         .single();
 
-      // 🔥 JIKA ERROR, TAMPILKAN ALERT DI LAYAR
-      if (error) {
-        alert("ERROR SUPABASE: " + error.message);
+      if (error || !profile) {
         router.replace('/dashboard');
         return;
       }
 
-      // 🔥 JIKA DATA TIDAK ADA, TAMPILKAN ALERT
-      if (!profile) {
-        alert("Data profile tidak ditemukan di database untuk user ini.");
-        router.replace('/dashboard');
-        return;
-      }
-
-      const role = profile.role?.toLowerCase();
-      alert("Role kamu adalah: " + role); // Lihat apa yang didapat dari DB
-
-      if (role === 'admin') {
+      if (profile.role?.toLowerCase() === 'admin') {
         setIsAuthorized(true);
         setIsLoading(false);
       } else {
