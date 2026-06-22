@@ -20,6 +20,7 @@ type SessionDetail = {
   analyst_profiles: {
     name: string;
     photo_url: string;
+    expertise?: string;
   };
 };
 
@@ -47,11 +48,13 @@ export default function UserChatRoom() {
   }, [messages]);
 
   useEffect(() => {
+    let channel: any;
+
     const initChat = async () => {
       // 1. Dapatkan ID User yang sedang login
       const { data: { session: authSession } } = await supabase.auth.getSession();
       if (!authSession) {
-        router.push('/auth');
+        router.replace('/auth');
         return;
       }
       setCurrentUserId(authSession.user.id);
@@ -63,17 +66,18 @@ export default function UserChatRoom() {
           id, 
           stage, 
           analyst_id,
-          analyst_profiles ( name, photo_url )
+          analyst_profiles ( name, photo_url, expertise )
         `)
         .eq('id', sessionId)
         .single();
 
       if (sessionError || !sessionData) {
-        alert('Sesi chat tidak ditemukan atau Anda tidak memiliki akses.');
-        router.push('/dashboard');
+        alert('Sesi chat tidak valid atau Anda tidak memiliki akses.');
+        router.replace('/dashboard');
         return;
       }
-      // @ts-ignore (Mengabaikan tipe bentrok dari relasi Supabase sementara)
+      
+      // @ts-ignore (Mengabaikan peringatan tipe relasi tunggal Supabase)
       setSessionDetail(sessionData);
 
       // 3. Ambil riwayat pesan
@@ -87,8 +91,8 @@ export default function UserChatRoom() {
       setIsLoading(false);
 
       // 4. Aktifkan Supabase Realtime untuk mendengarkan pesan baru
-      const channel = supabase
-        .channel(`chat_${sessionId}`)
+      channel = supabase
+        .channel(`chat_room_${sessionId}`)
         .on(
           'postgres_changes',
           {
@@ -99,119 +103,156 @@ export default function UserChatRoom() {
           },
           (payload) => {
             const newMsg = payload.new as Message;
-            // Tambahkan pesan ke UI secara langsung
-            setMessages((prev) => [...prev, newMsg]);
+            // Cegah duplikasi jika pesan ini adalah pesan yang baru saja kita kirim
+            setMessages((prev) => {
+              if (prev.some((msg) => msg.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
           }
         )
         .subscribe();
-
-      // Cleanup subscription saat komponen di-unmount
-      return () => {
-        supabase.removeChannel(channel);
-      };
     };
 
     if (sessionId) initChat();
+
+    // Cleanup subscription saat komponen ditutup/pindah halaman
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [sessionId, router]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!newMessage.trim() || !currentUserId) return;
 
     setIsSending(true);
-    const textToSend = newMessage;
-    setNewMessage(''); // Kosongkan input lebih awal agar UI terasa responsif
+    const textToSend = newMessage.trim();
+    setNewMessage(''); // Kosongkan input agar UI terasa responsif (Optimistic feeling)
 
-    const { error } = await supabase.from('chat_messages').insert([
-      {
-        session_id: sessionId,
-        sender_id: currentUserId,
-        message: textToSend,
-      },
-    ]);
+    const { data: insertedMsg, error } = await supabase
+      .from('chat_messages')
+      .insert([
+        {
+          session_id: sessionId,
+          sender_id: currentUserId,
+          message: textToSend,
+        },
+      ])
+      .select()
+      .single();
 
     if (error) {
-      alert('Gagal mengirim pesan');
-      setNewMessage(textToSend); // Kembalikan teks jika gagal
+      alert('Gagal mengirim pesan, periksa koneksi internet Anda.');
+      setNewMessage(textToSend); // Kembalikan teks jika gagal kirim
+    } else if (insertedMsg) {
+      // Masukkan ke state lokal segera setelah sukses disimpan di DB
+      setMessages((prev) => {
+        if (prev.some((msg) => msg.id === insertedMsg.id)) return prev;
+        return [...prev, insertedMsg];
+      });
     }
+    
     setIsSending(false);
   };
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600"></div></div>;
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Kirim pesan jika Enter ditekan tanpa Shift
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  if (isLoading) return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-500"></div>
+    </div>
+  );
 
   return (
-    <div className="flex flex-col h-screen bg-[#F4F5F7] max-w-4xl mx-auto shadow-2xl relative">
+    <div className="flex flex-col h-screen bg-[#F4F5F7] max-w-3xl mx-auto shadow-2xl relative overflow-hidden">
       
-      {/* HEADER CHAT */}
-      <header className="bg-white px-6 py-4 border-b border-slate-200 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-        <div className="flex items-center gap-4">
-          <Link href="/analis" className="h-10 w-10 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-600 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
+      {/* HEADER CHAT (Tema Mahasiswa - Emerald/Teal) */}
+      <header className="bg-white px-4 py-3 border-b border-slate-200 flex items-center justify-between sticky top-0 z-10 shadow-sm shrink-0">
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard" className="p-2 -ml-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
           </Link>
-          <img 
-            src={sessionDetail?.analyst_profiles?.photo_url || 'https://via.placeholder.com/40'} 
-            alt="Analis" 
-            className="w-10 h-10 rounded-full object-cover border border-slate-200"
-          />
+          <div className="relative">
+            <img 
+              src={sessionDetail?.analyst_profiles?.photo_url || 'https://via.placeholder.com/40'} 
+              alt="Analis" 
+              className="w-10 h-10 rounded-full object-cover border border-slate-200"
+            />
+            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 border-2 border-white"></span>
+          </div>
           <div>
-            <h1 className="font-bold text-slate-800 text-lg leading-tight">{sessionDetail?.analyst_profiles?.name}</h1>
-            <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-emerald-500"></span> Analis Aktif
+            <h1 className="font-bold text-slate-800 text-sm leading-tight">{sessionDetail?.analyst_profiles?.name || 'Pakar Analis'}</h1>
+            <p className="text-[10px] font-semibold text-emerald-600 truncate max-w-[150px] sm:max-w-[200px]">
+              {sessionDetail?.analyst_profiles?.expertise || 'Konsultan Akademik'}
             </p>
           </div>
         </div>
         
-        {/* Status Stage (Fitur Nomor 5) */}
-        <div className="hidden sm:block bg-blue-50 border border-blue-100 px-4 py-1.5 rounded-full">
-          <span className="text-xs font-bold text-blue-700 uppercase tracking-widest">Tahap: {sessionDetail?.stage}</span>
+        {/* Status Stage */}
+        <div className="hidden sm:flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-full">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Sesi Aktif</span>
         </div>
       </header>
 
-      {/* AREA PESAN */}
-      <main className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+      {/* AREA PESAN DENGAN BACKGROUND PATTERN */}
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-slate-50/50">
         
-        {/* Pesan Sistem / Intro */}
-        <div className="flex justify-center mb-4">
-          <span className="bg-slate-200 text-slate-600 text-xs font-bold px-4 py-1.5 rounded-full">
-            Konsultasi dimulai. Koin telah dipotong.
+        {/* Enkripsi Notice */}
+        <div className="flex justify-center mb-2 mt-2">
+          <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 text-center max-w-xs leading-relaxed">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3 shrink-0"><path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clipRule="evenodd" /></svg>
+            Sesi konsultasi {sessionDetail?.stage ? `tahap ${sessionDetail.stage}` : 'ini'} telah dimulai. Pesan dilindungi.
           </span>
         </div>
 
         {messages.map((msg) => {
           const isMe = msg.sender_id === currentUserId;
           return (
-            <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[75%] px-5 py-3 text-sm shadow-sm ${
+            <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} group`}>
+              <div className={`max-w-[85%] sm:max-w-[75%] px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
                 isMe 
-                  ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm' 
+                  ? 'bg-emerald-500 text-white rounded-2xl rounded-tr-sm' 
                   : 'bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-sm'
               }`}>
-                {msg.message}
-                <div className={`text-[10px] mt-1 text-right ${isMe ? 'text-blue-200' : 'text-slate-400'}`}>
-                  {new Date(msg.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                </div>
+                {msg.message.split('\n').map((line, i) => (
+                  <span key={i}>{line}<br /></span>
+                ))}
               </div>
+              <span className={`text-[9px] font-semibold text-slate-400 mt-1 px-1 transition-opacity opacity-70 group-hover:opacity-100`}>
+                {new Date(msg.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+              </span>
             </div>
           );
         })}
-        <div ref={messagesEndRef} /> {/* Anchor untuk auto-scroll */}
+        <div ref={messagesEndRef} className="h-1" /> {/* Anchor untuk auto-scroll */}
       </main>
 
       {/* INPUT FORM BAWAH */}
-      <footer className="bg-white p-4 border-t border-slate-200 sticky bottom-0">
-        <form onSubmit={handleSendMessage} className="flex items-center gap-3">
-          <input
-            type="text"
+      <footer className="bg-white p-3 sm:p-4 border-t border-slate-200 shrink-0 shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.02)] pb-safe">
+        <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+          <textarea
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Ketik pesan untuk analis..."
-            className="flex-1 bg-slate-100 border border-slate-200 rounded-full px-5 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all text-slate-800"
+            onKeyDown={handleKeyDown}
+            placeholder="Ketik pesan... (Shift+Enter untuk baris baru)"
+            className="flex-1 bg-slate-100 border border-slate-200 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500/50 focus:bg-white transition-all text-slate-800 resize-none min-h-[44px] max-h-32 custom-scrollbar"
             disabled={isSending}
+            rows={1}
           />
           <button 
             type="submit" 
             disabled={!newMessage.trim() || isSending}
-            className="h-12 w-12 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-full flex items-center justify-center transition-colors shadow-md"
+            className="h-11 w-11 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white rounded-full flex items-center justify-center transition-colors shadow-sm shrink-0"
           >
             {isSending ? (
                <div className="h-5 w-5 border-2 border-white border-t-transparent animate-spin rounded-full"></div>
