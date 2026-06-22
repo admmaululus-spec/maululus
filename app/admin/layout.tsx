@@ -13,23 +13,64 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     const checkAdmin = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.replace('/auth');
-        return;
-      }
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-      if (profile?.role !== 'admin') {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError || !session) {
+          router.replace('/auth');
+          return;
+        }
+
+        // ⬇️ Coba dari tabel 'profiles' dulu
+        let role: string | null = null;
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profileError || !profile) {
+          console.warn('⚠️ profiles query failed, trying users_data:', profileError?.message);
+
+          // ⬇️ Fallback: coba dari tabel 'users_data'
+          const { data: userData, error: userError } = await supabase
+            .from('users_data')
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
+
+          if (userError || !userData) {
+            console.error('❌ users_data query also failed:', userError?.message);
+            router.replace('/dashboard');
+            return;
+          }
+          role = userData.role;
+        } else {
+          role = profile.role;
+        }
+
+        // ⬇️ Cek role (case-insensitive untuk jaga-jaga)
+        if (role?.toLowerCase() !== 'admin') {
+          console.warn(`⚠️ Role is "${role}", not "admin". Redirecting to /dashboard`);
+          router.replace('/dashboard');
+          return;
+        }
+
+        setIsAuthorized(true);
+        setIsLoading(false);
+      } catch (err) {
+        console.error('❌ Admin check error:', err);
         router.replace('/dashboard');
-        return;
       }
-      setIsAuthorized(true);
-      setIsLoading(false);
     };
     checkAdmin();
   }, [router]);
 
-  if (isLoading) return <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center"><div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600"></div></div>;
+  if (isLoading) return (
+    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600"></div>
+    </div>
+  );
   if (!isAuthorized) return null;
 
   return (
@@ -39,7 +80,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="text-2xl font-black text-white tracking-tight">Mau<span className="text-blue-500">lulus</span></div>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1.5">Admin Panel</p>
         </div>
-        
+
         <nav className="flex-1 px-4 py-2 space-y-1.5 overflow-y-auto">
           <Link href="/admin" className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200 ${pathname === '/admin' ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20' : 'hover:bg-slate-800 hover:text-slate-200'}`}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
