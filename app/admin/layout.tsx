@@ -13,31 +13,47 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     const checkAdmin = async () => {
+      // 1. Cek sesi lokal
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
+        console.error("🔴 Akses ditolak: Sesi tidak ditemukan.");
         router.replace('/auth');
         return;
       }
 
+      // 2. Ambil profil berdasarkan ID user
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', session.user.id)
         .single();
 
-      if (error || !profile) {
+      // 3. Tangkap dan log jenis errornya
+      if (error) {
+        console.error("🔴 Error mengambil profil dari DB:", error.message, error.details);
+        console.error("Hint: Cek apakah ID user tersebut ada di tabel 'profiles', atau cek pengaturan RLS.");
         router.replace('/dashboard');
         return;
       }
 
+      if (!profile) {
+        console.error("🔴 Akses ditolak: Data profil kosong/tidak ditemukan.");
+        router.replace('/dashboard');
+        return;
+      }
+
+      // 4. Cek role
       if (profile.role?.toLowerCase() === 'admin') {
+        console.log("🟢 Login admin berhasil, otorisasi diberikan!");
         setIsAuthorized(true);
         setIsLoading(false);
       } else {
+        console.error("🔴 Akses ditolak: Role akun ini adalah ->", profile.role);
         router.replace('/dashboard');
       }
     };
+    
     checkAdmin();
   }, [router]);
 
