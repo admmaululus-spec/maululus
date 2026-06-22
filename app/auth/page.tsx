@@ -48,24 +48,24 @@ export default function AuthPage() {
           throw error;
         }
 
-         // ✨ SMART ROUTING ✨
-         if (authData.session) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', authData.session.user.id)
-            .single();
-
-          const role = profile?.role?.toLowerCase();
-
-          if (role === 'admin') {
-            window.location.href = '/admin'; 
-          } else if (role === 'analyst' || role === 'analis') {
-            window.location.href = '/analisis/dashboard'; // Sesuaikan dengan nama foldermu
-          } else {
-            window.location.href = '/dashboard';
-          }
-        }
+             // ✨ SMART ROUTING ✨
+             if (authData.session) {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', authData.session.user.id)
+                .single();
+    
+              const role = profile?.role?.toLowerCase();
+    
+              if (role === 'admin') {
+                window.location.href = '/admin'; 
+              } else if (role === 'analyst' || role === 'analis') {
+                window.location.href = '/analisis/dashboard';
+              } else {
+                window.location.href = '/dashboard';
+              }
+            }
 
       } else {
         // --- PROSES REGISTER ---

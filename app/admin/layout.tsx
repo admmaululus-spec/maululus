@@ -13,53 +13,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     const checkAdmin = async () => {
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        router.replace('/auth');
+        return;
+      }
 
-        if (sessionError || !session) {
-          router.replace('/auth');
-          return;
-        }
+      // Hanya query ke tabel profiles
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
 
-        // ⬇️ Coba dari tabel 'profiles' dulu
-        let role: string | null = null;
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
+      if (error) {
+        console.error("Error mengambil profile:", error.message);
+        router.replace('/dashboard');
+        return;
+      }
 
-        if (profileError || !profile) {
-          console.warn('⚠️ profiles query failed, trying users_data:', profileError?.message);
-
-          // ⬇️ Fallback: coba dari tabel 'users_data'
-          const { data: userData, error: userError } = await supabase
-            .from('users_data')
-            .select('role')
-            .eq('id', session.user.id)
-            .single();
-
-          if (userError || !userData) {
-            console.error('❌ users_data query also failed:', userError?.message);
-            router.replace('/dashboard');
-            return;
-          }
-          role = userData.role;
-        } else {
-          role = profile.role;
-        }
-
-        // ⬇️ Cek role (case-insensitive untuk jaga-jaga)
-        if (role?.toLowerCase() !== 'admin') {
-          console.warn(`⚠️ Role is "${role}", not "admin". Redirecting to /dashboard`);
-          router.replace('/dashboard');
-          return;
-        }
-
+      // Case-insensitive check
+      if (profile?.role?.toLowerCase() === 'admin') {
         setIsAuthorized(true);
         setIsLoading(false);
-      } catch (err) {
-        console.error('❌ Admin check error:', err);
+      } else {
         router.replace('/dashboard');
       }
     };
