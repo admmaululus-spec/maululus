@@ -224,7 +224,25 @@ export default function AnalystChatManagement() {
               <span className="bg-slate-200 text-slate-600 text-[10px] font-bold px-3 py-1.5 rounded-lg">Sesi Terhubung secara Real-Time</span>
             </div>
             {messages.map((msg) => {
+              const isPinned = msg.message.startsWith('📌');
               const isMe = msg.sender_id === currentUserId;
+
+              if (isPinned) {
+                return (
+                  <div key={msg.id} className="flex justify-center my-4 px-2 w-full">
+                    <div className="bg-[#0D1C2E] border border-blue-900 text-white px-5 py-4 rounded-2xl text-sm leading-relaxed shadow-lg w-full max-w-[90%] md:max-w-xl text-left">
+                      <div className="font-bold mb-2 flex items-center gap-2 text-amber-400 text-xs tracking-widest uppercase">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M11.47 2.47a.75.75 0 011.06 0l4.5 4.5a.75.75 0 01-1.06 1.06l-3.22-3.22V16.5a.75.75 0 01-1.5 0V4.81L8.03 8.03a.75.75 0 01-1.06-1.06l4.5-4.5zM3 15.75a.75.75 0 01.75.75v2.25a1.5 1.5 0 001.5 1.5h13.5a1.5 1.5 0 001.5-1.5V16.5a.75.75 0 011.5 0v2.25a3 3 0 01-3 3H5.25a3 3 0 01-3-3V16.5a.75.75 0 01.75-.75z" clipRule="evenodd" /></svg>
+                        Konteks Topik Obrolan
+                      </div>
+                      <div className="text-slate-200">
+                        {msg.message.replace('📌 TOPIK SKRIPSI YANG DIPILIH:\n\n', '').replace('📌 KONTEKS KONSULTASI UMUM:\n', '').split('\n').map((line, i) => <span key={i}>{line}<br /></span>)}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} group`}>
                   <div className={`max-w-[85%] md:max-w-[70%] px-4 py-2.5 text-sm leading-relaxed shadow-sm ${isMe ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm' : 'bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-sm'}`}>

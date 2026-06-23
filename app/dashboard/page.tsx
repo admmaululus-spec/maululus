@@ -127,7 +127,6 @@ export default function DashboardPage() {
   };
 
   const handleChatAnalis = async (analis: Analyst) => {
-    // Skenario Bypass WA
     if (analis.is_wa_enabled && analis.wa_number) {
       const waLink = `https://wa.me/${analis.wa_number.replace(/^0/, '62')}?text=Halo%20kak%20${analis.name},%20saya%20ingin%20konsultasi%20skripsi%20dari%20Maululus.`;
       window.open(waLink, '_blank');
@@ -143,43 +142,52 @@ export default function DashboardPage() {
     if (!confirm(`Potong ${analis.price} Koin untuk chat dengan ${analis.name}?`)) return;
 
     setIsProcessing(`chat_${analis.id}`);
+
+    // --- SNAPSHOT SALDO AWAL UNTUK ROLLBACK ---
+    const initialUserKoin = koin;
+    let initialAnalystKoin = 0;
+
+    if (analis.user_id) {
+      const { data: dataAnalis } = await supabase.from('users_data').select('koin').eq('id', analis.user_id).single();
+      initialAnalystKoin = dataAnalis?.koin || 0;
+    }
+    // ------------------------------------------
+
     try {
-      // 1. Potong koin dari mahasiswa
-      const { error: koinError } = await supabase.from('users_data').update({ koin: koin - analis.price }).eq('id', userId);
+      // 1. Potong koin mahasiswa
+      const { error: koinError } = await supabase.from('users_data').update({ koin: initialUserKoin - analis.price }).eq('id', userId);
       if (koinError) throw koinError;
-      
-      setKoin(prev => prev - analis.price);
+      setKoin(initialUserKoin - analis.price); // Update UI sementara
 
-      // --- LOGIKA TRANSFER KOIN KE E-WALLET ANALIS ---
+      // 2. Transfer koin ke Analis
       if (analis.user_id) {
-        // Cek saldo analis saat ini
-        const { data: dataAnalis } = await supabase.from('users_data').select('koin').eq('id', analis.user_id).single();
-        const koinAnalisSaatIni = dataAnalis?.koin || 0;
-        
-        // Tambahkan koin ke dompet analis
-        await supabase.from('users_data').update({ koin: koinAnalisSaatIni + analis.price }).eq('id', analis.user_id);
+        const { error: transferError } = await supabase.from('users_data').update({ koin: initialAnalystKoin + analis.price }).eq('id', analis.user_id);
+        if (transferError) throw transferError;
       }
-      // -----------------------------------------------
 
-      // 2. BUAT SESI CHAT BARU DI DATABASE
+      // 3. Buat sesi chat
       const { data: newSession, error: sessionError } = await supabase
         .from('chat_sessions')
-        .insert({
-          user_id: userId,
-          analyst_id: analis.id,
-          stage: 'Konsultasi Awal'
-        })
+        .insert({ user_id: userId, analyst_id: analis.id, stage: 'Konsultasi Awal' })
         .select()
         .single();
 
       if (sessionError) throw sessionError;
 
-      // 3. Arahkan mahasiswa ke ruang chat berdasarkan ID Sesi yang baru dibuat
+      // Sukses! Lempar ke ruang chat
       router.push(`/chat/${newSession.id}`);
       
     } catch (err: any) {
-      console.error(err);
-      alert(`Gagal memproses sesi chat: ${err.message || 'Kesalahan pada sistem database.'}`);
+      console.error("Gagal transaksi:", err);
+      
+      // 🚨 SISTEM ROLLBACK (PENGEMBALIAN DANA OTOMATIS) 🚨
+      await supabase.from('users_data').update({ koin: initialUserKoin }).eq('id', userId);
+      if (analis.user_id) {
+        await supabase.from('users_data').update({ koin: initialAnalystKoin }).eq('id', analis.user_id);
+      }
+      setKoin(initialUserKoin); // Kembalikan angka di UI
+      
+      alert(`Terjadi kesalahan sistem. Saldo ${analis.price} Koin Anda telah dikembalikan dengan aman.`);
     } finally {
       setIsProcessing(null);
     }
