@@ -280,12 +280,18 @@ export default function UserChatRoom() {
           <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="h-11 w-11 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-full flex items-center justify-center transition-colors shrink-0 disabled:opacity-50">
             {isUploading ? <div className="h-5 w-5 border-2 border-emerald-500 border-t-transparent animate-spin rounded-full"></div> : <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" /></svg>}
           </button>
+          
+          {/* TEXTAREA YANG SUDAH DIPERBAIKI WARNANYA */}
           <textarea
-            value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+            value={newMessage} 
+            onChange={(e) => setNewMessage(e.target.value)} 
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
             placeholder="Ketik pesan..."
-            className="flex-1 bg-slate-100 border border-slate-200 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all resize-none min-h-[44px] max-h-32 custom-scrollbar"
-            disabled={isSending} rows={1}
+            className="flex-1 bg-slate-100 border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/50 transition-all resize-none min-h-[44px] max-h-32 custom-scrollbar"
+            disabled={isSending} 
+            rows={1}
           />
+
           <button type="submit" disabled={!newMessage.trim() || isSending} className="h-11 w-11 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white rounded-full flex items-center justify-center transition-colors shadow-sm shrink-0">
             {isSending ? <div className="h-5 w-5 border-2 border-white border-t-transparent animate-spin rounded-full"></div> : <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 ml-0.5"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" /></svg>}
           </button>
