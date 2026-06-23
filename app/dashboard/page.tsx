@@ -177,8 +177,9 @@ export default function DashboardPage() {
       // 3. Arahkan mahasiswa ke ruang chat berdasarkan ID Sesi yang baru dibuat
       router.push(`/chat/${newSession.id}`);
       
-    } catch (err) {
-      alert("Gagal memproses sesi chat. Coba lagi.");
+    } catch (err: any) {
+      console.error(err);
+      alert(`Gagal memproses sesi chat: ${err.message || 'Kesalahan pada sistem database.'}`);
     } finally {
       setIsProcessing(null);
     }

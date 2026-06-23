@@ -45,7 +45,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       if (currentRole === 'admin' || currentRole === 'analyst' || currentRole === 'analis') {
         
-        // --- AMBIL DATA E-WALLET (KOIN) ---
+        // --- AMBIL DATA KOIN ---
         const { data: userData } = await supabase
           .from('users_data')
           .select('koin')
@@ -113,9 +113,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 Overview Stats
               </Link>
 
-              <Link href="/admin/users" className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200 ${pathname?.includes('/admin/users') || pathname?.includes('/admin/analis') ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20' : 'hover:bg-slate-800 hover:text-slate-200'}`}>
+              {/* MENU DIPISAH KEMBALI */}
+              <Link href="/admin/users" className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200 ${pathname?.includes('/admin/users') ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20' : 'hover:bg-slate-800 hover:text-slate-200'}`}>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
-                Kelola User & Analis
+                Kelola User & Koin
+              </Link>
+
+              <Link href="/admin/analis" className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200 ${pathname?.includes('/admin/analis') ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20' : 'hover:bg-slate-800 hover:text-slate-200'}`}>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" /></svg>
+                Kelola Tim Analis
               </Link>
 
               <Link href="/admin/skripsi" className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200 ${pathname?.includes('/admin/skripsi') ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20' : 'hover:bg-slate-800 hover:text-slate-200'}`}>
@@ -147,11 +153,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* ================= BAGIAN BAWAH: E-WALLET & AKUN ================= */}
         <div className="p-5 border-t border-slate-800/60 bg-slate-900/50 shrink-0">
           
-          {/* Box E-Wallet */}
+          {/* Box E-Wallet / Pendapatan Dinamis */}
           <div className="bg-slate-800/80 rounded-xl p-3.5 mb-4 flex items-center justify-between border border-slate-700/50 shadow-inner">
             <div className="flex items-center gap-2.5">
-              <span className="bg-emerald-500/20 text-emerald-400 h-7 w-7 rounded-lg flex items-center justify-center text-sm">🪙</span>
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">E-Wallet</span>
+              <span className={`${isAdmin ? 'bg-blue-500/20 text-blue-400' : 'bg-emerald-500/20 text-emerald-400'} h-7 w-7 rounded-lg flex items-center justify-center text-sm`}>
+                {isAdmin ? '💎' : '💰'}
+              </span>
+              <span className={`text-[11px] font-bold uppercase tracking-widest ${isAdmin ? 'text-slate-400' : 'text-emerald-400'}`}>
+                {isAdmin ? 'Total Koin User' : 'Pendapatan'}
+              </span>
             </div>
             <div className="text-right">
               <p className="text-sm font-black text-white">{walletBalance} Koin</p>
