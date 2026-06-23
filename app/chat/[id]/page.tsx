@@ -6,9 +6,29 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import Link from 'next/link';
 
-type Message = { id: string; sender_id: string; message: string; created_at: string; };
+type Message = { id: string; sender_id: string; message: string; created_at: string; file_url?: string; file_name?: string; file_type?: string; is_read?: boolean; };
 type SessionDetail = { id: string; stage: string; analyst_id: string; analyst_profiles: { name: string; photo_url: string; expertise?: string; }; };
-type SkripsiHistory = { id: string; judul: string; created_at: string; };
+
+const Toast = ({ msg, type, onClose }: { msg: string, type: 'success' | 'error' | 'info', onClose: () => void }) => (
+  <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-5 fade-in duration-300">
+    <div className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border ${type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+      <span className="text-sm font-bold">{msg}</span>
+      <button onClick={onClose} className="ml-2 opacity-50 hover:opacity-100">✕</button>
+    </div>
+  </div>
+);
+
+// 🛡️ FUNGSI FILTER NOMOR TELEPON (ANTI BYPASS) 🛡️
+const containsPhoneNumber = (text: string) => {
+  const normalized = text.toLowerCase()
+    .replace(/\s|-|\.|\+|,/g, '') // Hapus spasi dan simbol
+    .replace(/o/g, '0').replace(/i/g, '1').replace(/l/g, '1').replace(/z/g, '2')
+    .replace(/e/g, '3').replace(/a/g, '4').replace(/s/g, '5').replace(/g/g, '6')
+    .replace(/t/g, '7').replace(/b/g, '8').replace(/p/g, '9');
+  
+  // Deteksi format Indonesia (08xxx atau 628xxx) dengan panjang 9-14 digit
+  return /(08|628)\d{7,12}/.test(normalized);
+};
 
 export default function UserChatRoom() {
   const params = useParams();
@@ -19,273 +39,258 @@ export default function UserChatRoom() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null); // State untuk Fitur Reply
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-
-  // States untuk Popup Pilih Skripsi
-  const [showTopicPicker, setShowTopicPicker] = useState(false);
-  const [userHistory, setUserHistory] = useState<SkripsiHistory[]>([]);
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
-  const [isSubmittingTopic, setIsSubmittingTopic] = useState(false);
-
+  const [isUploading, setIsUploading] = useState(false);
+  const [toast, setToast] = useState<{msg: string, type: 'success'|'error'} | null>(null);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  const showToast = (msg: string, type: 'success'|'error' = 'error') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   useEffect(() => {
     let channel: any;
-
     const initChat = async () => {
       const { data: { session: authSession } } = await supabase.auth.getSession();
       if (!authSession) return router.replace('/auth');
       setCurrentUserId(authSession.user.id);
 
-      const { data: sessionData, error: sessionError } = await supabase
-        .from('chat_sessions')
-        .select(`id, stage, analyst_id, analyst_profiles ( name, photo_url, expertise )`)
-        .eq('id', sessionId)
-        .single();
-
+      const { data: sessionData, error: sessionError } = await supabase.from('chat_sessions').select(`id, stage, analyst_id, analyst_profiles(name, photo_url, expertise)`).eq('id', sessionId).single();
       if (sessionError || !sessionData) {
-        alert('Sesi chat tidak valid.');
+        showToast('Sesi chat tidak valid.', 'error');
         return router.replace('/dashboard');
       }
-      
-      // @ts-ignore
-      setSessionDetail(sessionData);
+      setSessionDetail(sessionData as any);
 
-      const { data: messagesData } = await supabase
-        .from('chat_messages')
-        .select('*')
-        .eq('session_id', sessionId)
-        .order('created_at', { ascending: true });
-
+      // Fetch Pesan
+      const { data: messagesData } = await supabase.from('chat_messages').select('*').eq('session_id', sessionId).order('created_at', { ascending: true });
       if (messagesData) {
         setMessages(messagesData);
-        // LOGIKA POPUP: Jika belum ada chat sama sekali, paksa user pilih skripsi
-        if (messagesData.length === 0) {
-          setShowTopicPicker(true);
-          const { data: hist } = await supabase.from('history_skripsi').select('id, judul, created_at').eq('user_id', authSession.user.id).order('created_at', { ascending: false });
-          if (hist) setUserHistory(hist);
+        
+        // --- FITUR READ RECEIPTS: Tandai pesan lawan bicara sebagai "dibaca" ---
+        const unreadIds = messagesData.filter(m => m.sender_id !== authSession.user.id && !m.is_read).map(m => m.id);
+        if (unreadIds.length > 0) {
+          await supabase.from('chat_messages').update({ is_read: true }).in('id', unreadIds);
         }
       }
       setIsLoading(false);
 
+      // Realtime Listener
       channel = supabase.channel(`chat_room_${sessionId}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `session_id=eq.${sessionId}` },
-          (payload) => {
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `session_id=eq.${sessionId}` }, (payload) => {
             const newMsg = payload.new as Message;
-            setMessages((prev) => {
-              if (prev.some((msg) => msg.id === newMsg.id)) return prev;
-              return [...prev, newMsg];
-            });
-          }
-        ).subscribe();
+            setMessages((prev) => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
+            
+            // Auto Read jika kita sedang buka halamannya
+            if (newMsg.sender_id !== authSession.user.id) {
+              supabase.from('chat_messages').update({ is_read: true }).eq('id', newMsg.id).then();
+            }
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `session_id=eq.${sessionId}` }, (payload) => {
+            const updatedMsg = payload.new as Message;
+            setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
+        }).subscribe();
     };
 
     if (sessionId) initChat();
     return () => { if (channel) supabase.removeChannel(channel); };
   }, [sessionId, router]);
 
-  // Fungsi Mensubmit Konteks Topik (Pesan Pinned Pertama)
-  const handleStartWithTopic = async (useTopic: boolean) => {
-    if (!currentUserId) return;
-    setIsSubmittingTopic(true);
+  // Upload Lampiran
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !currentUserId) return;
+    if (file.size > 5 * 1024 * 1024) return showToast('Ukuran file maksimal 5MB', 'error');
 
-    let firstMessageText = "📌 KONTEKS KONSULTASI UMUM:\nMahasiswa memulai sesi tanpa memilih hasil generate skripsi.";
+    setIsUploading(true);
+    const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+    const fileType = file.type.startsWith('image/') ? 'image' : 'document';
 
-    if (useTopic && selectedTopics.length > 0) {
-      const selectedTitles = userHistory.filter(h => selectedTopics.includes(h.id)).map(h => h.judul);
-      firstMessageText = `📌 TOPIK SKRIPSI YANG DIPILIH:\n\n` + selectedTitles.map((t, i) => `${i+1}. ${t}`).join('\n\n');
+    try {
+      const { error: uploadError } = await supabase.storage.from('chat_attachments').upload(`${sessionId}/${fileName}`, file);
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage.from('chat_attachments').getPublicUrl(`${sessionId}/${fileName}`);
+      
+      const { data: insertedMsg, error: dbError } = await supabase.from('chat_messages').insert([{
+        session_id: sessionId, sender_id: currentUserId,
+        message: fileType === 'image' ? '📷 Mengirim gambar' : `📄 Mengirim dokumen: ${file.name}`,
+        file_url: publicUrlData.publicUrl, file_name: file.name, file_type: fileType
+      }]).select().single();
+
+      if (dbError) throw dbError;
+      if (insertedMsg) setMessages(prev => prev.some(m => m.id === insertedMsg.id) ? prev : [...prev, insertedMsg]);
+    } catch (err: any) {
+      showToast('Gagal upload lampiran. Coba lagi.', 'error');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
-
-    const { data: insertedMsg, error } = await supabase.from('chat_messages').insert([{
-      session_id: sessionId,
-      sender_id: currentUserId,
-      message: firstMessageText,
-    }]).select().single();
-
-    if (!error && insertedMsg) {
-      setShowTopicPicker(false);
-      setMessages([insertedMsg]);
-    } else {
-      alert("Gagal memulai sesi. Periksa koneksi Anda.");
-    }
-    setIsSubmittingTopic(false);
   };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!newMessage.trim() || !currentUserId) return;
 
+    // 🚨 CEK NOMOR TELEPON 🚨
+    if (containsPhoneNumber(newMessage)) {
+      showToast('Pesan diblokir: Dilarang mengirim nomor WhatsApp atau kontak pribadi.', 'error');
+      return;
+    }
+
     setIsSending(true);
-    const textToSend = newMessage.trim();
+    let textToSend = newMessage.trim();
+    
+    // FORMAT REPLY
+    if (replyingTo) {
+      const snippet = replyingTo.message.substring(0, 30).replace(/\n/g, ' ');
+      textToSend = `> Membalas: "${snippet}..."\n\n${textToSend}`;
+    }
+
     setNewMessage('');
+    setReplyingTo(null);
 
     const { data: insertedMsg, error } = await supabase.from('chat_messages').insert([{
-      session_id: sessionId,
-      sender_id: currentUserId,
-      message: textToSend,
+      session_id: sessionId, sender_id: currentUserId, message: textToSend,
     }]).select().single();
 
     if (error) {
-      alert('Gagal mengirim pesan');
+      showToast('Gagal mengirim pesan', 'error');
       setNewMessage(textToSend);
     } else if (insertedMsg) {
-      setMessages((prev) => {
-        if (prev.some((msg) => msg.id === insertedMsg.id)) return prev;
-        return [...prev, insertedMsg];
-      });
+      setMessages(prev => prev.some(m => m.id === insertedMsg.id) ? prev : [...prev, insertedMsg]);
     }
     setIsSending(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
   };
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-500"></div></div>;
 
   return (
     <div className="flex flex-col h-screen bg-[#F4F5F7] max-w-3xl mx-auto shadow-2xl relative overflow-hidden">
-      
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+
       <header className="bg-white px-4 py-3 border-b border-slate-200 flex items-center justify-between sticky top-0 z-10 shadow-sm shrink-0">
         <div className="flex items-center gap-3">
           <Link href="/dashboard" className="p-2 -ml-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
           </Link>
-          <div className="relative">
-            <img src={sessionDetail?.analyst_profiles?.photo_url || 'https://via.placeholder.com/40'} alt="Analis" className="w-10 h-10 rounded-full object-cover border border-slate-200"/>
-            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 border-2 border-white"></span>
-          </div>
+          <img src={sessionDetail?.analyst_profiles?.photo_url || 'https://via.placeholder.com/40'} alt="Analis" className="w-10 h-10 rounded-full object-cover border border-slate-200"/>
           <div>
-            <h1 className="font-bold text-slate-800 text-sm leading-tight">{sessionDetail?.analyst_profiles?.name || 'Pakar Analis'}</h1>
-            <p className="text-[10px] font-semibold text-emerald-600 truncate max-w-[150px] sm:max-w-[200px]">{sessionDetail?.analyst_profiles?.expertise || 'Konsultan Akademik'}</p>
+            <h1 className="font-bold text-slate-800 text-sm">{sessionDetail?.analyst_profiles?.name}</h1>
+            <p className="text-[10px] font-semibold text-emerald-600">Pakar {sessionDetail?.analyst_profiles?.expertise}</p>
           </div>
-        </div>
-        <div className="hidden sm:flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-full">
-          <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
-          <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Sesi Aktif</span>
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-slate-50/50 relative">
-        <div className="flex justify-center mb-2 mt-2">
-          <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 text-center max-w-xs leading-relaxed">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3 shrink-0"><path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clipRule="evenodd" /></svg>
-            Sesi konsultasi dimulai. Pesan dilindungi end-to-end.
-          </span>
-        </div>
-
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-slate-50/50">
+        
         {messages.map((msg) => {
           const isPinned = msg.message.startsWith('📌');
+          const isReply = msg.message.startsWith('> Membalas:');
           const isMe = msg.sender_id === currentUserId;
+          
+          let displayMsg = msg.message;
+          let replySnippet = '';
+          if (isReply) {
+            const parts = msg.message.split('\n\n');
+            replySnippet = parts[0].replace('> Membalas: ', '');
+            displayMsg = parts.slice(1).join('\n\n');
+          }
 
-          // RENDER PINNED MESSAGE KHUSUS
           if (isPinned) {
             return (
               <div key={msg.id} className="flex justify-center my-4 px-2 w-full">
                 <div className="bg-[#0D1C2E] border border-blue-900 text-white px-5 py-4 rounded-2xl text-sm leading-relaxed shadow-lg w-full max-w-[90%] text-left">
-                  <div className="font-bold mb-2 flex items-center gap-2 text-amber-400 text-xs tracking-widest uppercase">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M11.47 2.47a.75.75 0 011.06 0l4.5 4.5a.75.75 0 01-1.06 1.06l-3.22-3.22V16.5a.75.75 0 01-1.5 0V4.81L8.03 8.03a.75.75 0 01-1.06-1.06l4.5-4.5zM3 15.75a.75.75 0 01.75.75v2.25a1.5 1.5 0 001.5 1.5h13.5a1.5 1.5 0 001.5-1.5V16.5a.75.75 0 011.5 0v2.25a3 3 0 01-3 3H5.25a3 3 0 01-3-3V16.5a.75.75 0 01.75-.75z" clipRule="evenodd" /></svg>
-                    Konteks Topik Obrolan
-                  </div>
-                  <div className="text-slate-200">
-                    {msg.message.replace('📌 TOPIK SKRIPSI YANG DIPILIH:\n\n', '').replace('📌 KONTEKS KONSULTASI UMUM:\n', '').split('\n').map((line, i) => <span key={i}>{line}<br /></span>)}
-                  </div>
+                  <div className="font-bold mb-2 flex items-center gap-2 text-amber-400 text-xs tracking-widest uppercase">📌 Konteks Skripsi</div>
+                  <div className="text-slate-200">{displayMsg.replace('📌 TOPIK SKRIPSI YANG DIPILIH:\n\n', '').replace('📌 KONTEKS KONSULTASI UMUM:\n', '').split('\n').map((l, i) => <span key={i}>{l}<br/></span>)}</div>
                 </div>
               </div>
             );
           }
 
-          // RENDER PESAN NORMAL
           return (
-            <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} group`}>
-              <div className={`max-w-[85%] sm:max-w-[75%] px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
-                isMe ? 'bg-emerald-500 text-white rounded-2xl rounded-tr-sm' : 'bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-sm'
-              }`}>
-                {msg.message.split('\n').map((line, i) => <span key={i}>{line}<br /></span>)}
+            <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} group relative`}>
+              
+              {/* TOMBOL REPLY DI SEBELAH PESAN SAAT HOVER */}
+              <button onClick={() => setReplyingTo(msg)} className={`absolute top-2 ${isMe ? '-left-8' : '-right-8'} opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-emerald-600 transition-opacity bg-white rounded-full shadow-sm`}>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" /></svg>
+              </button>
+
+              <div className={`max-w-[85%] sm:max-w-[75%] shadow-sm flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                
+                {/* BLOK REPLY JIKA ADA */}
+                {isReply && (
+                  <div className={`mb-1 px-3 py-1.5 rounded-lg text-[10px] italic border-l-2 ${isMe ? 'bg-emerald-600 border-emerald-200 text-emerald-100' : 'bg-slate-100 border-slate-300 text-slate-500'}`}>
+                    Membalas: {replySnippet}
+                  </div>
+                )}
+
+                <div className={`px-4 py-2.5 text-sm leading-relaxed ${isMe ? 'bg-emerald-500 text-white rounded-2xl rounded-tr-sm' : 'bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-sm'}`}>
+                  
+                  {/* LAMPIRAN */}
+                  {msg.file_url && msg.file_type === 'image' && <a href={msg.file_url} target="_blank" rel="noopener noreferrer"><img src={msg.file_url} alt="Attachment" className="max-h-60 w-auto rounded-xl object-cover mb-2" /></a>}
+                  {msg.file_url && msg.file_type === 'document' && (
+                    <a href={msg.file_url} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-3 p-3 rounded-xl mb-2 transition-colors ${isMe ? 'bg-emerald-600' : 'bg-slate-50 border border-slate-200'}`}>
+                      <div className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg bg-white/20"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg></div>
+                      <div className="overflow-hidden"><p className="text-xs font-bold truncate max-w-[150px]">{msg.file_name}</p></div>
+                    </a>
+                  )}
+                  {/* TEKS PESAN */}
+                  {(!msg.file_url || msg.message !== `📄 Mengirim dokumen: ${msg.file_name}` && msg.message !== '📷 Mengirim gambar') && displayMsg.split('\n').map((l, i) => <span key={i}>{l}<br/></span>)}
+                </div>
               </div>
-              <span className={`text-[9px] font-semibold text-slate-400 mt-1 px-1 transition-opacity opacity-70 group-hover:opacity-100`}>
-                {new Date(msg.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-              </span>
+
+              {/* WAKTU & STATUS BACA (CENTANG) */}
+              <div className="flex items-center gap-1 mt-1 px-1">
+                <span className="text-[9px] font-semibold text-slate-400 opacity-70 group-hover:opacity-100 transition-opacity">
+                  {new Date(msg.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                {isMe && (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-3.5 h-3.5 ${msg.is_read ? 'text-blue-500' : 'text-slate-300'}`}>
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.815a.75.75 0 011.05-.145z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
             </div>
           );
         })}
         <div ref={messagesEndRef} className="h-1" />
       </main>
 
-      <footer className="bg-white p-3 sm:p-4 border-t border-slate-200 shrink-0 pb-safe z-10">
-        <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+      <footer className="bg-white border-t border-slate-200 shrink-0 pb-safe z-10 flex flex-col">
+        
+        {/* PREVIEW REPLY BOX */}
+        {replyingTo && (
+          <div className="bg-emerald-50 px-4 py-2 border-l-4 border-emerald-500 flex justify-between items-center text-xs text-emerald-800">
+            <span className="truncate pr-4">Membalas: {replyingTo.message.substring(0,40)}...</span>
+            <button onClick={() => setReplyingTo(null)} className="font-bold p-1 hover:bg-emerald-200 rounded-full">✕</button>
+          </div>
+        )}
+
+        <form onSubmit={handleSendMessage} className="flex items-end gap-2 p-3 sm:p-4">
+          <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*,.pdf,.doc,.docx" className="hidden" />
+          <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="h-11 w-11 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-full flex items-center justify-center transition-colors shrink-0 disabled:opacity-50">
+            {isUploading ? <div className="h-5 w-5 border-2 border-emerald-500 border-t-transparent animate-spin rounded-full"></div> : <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" /></svg>}
+          </button>
           <textarea
-            value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={handleKeyDown}
-            placeholder="Ketik pesan... (Shift+Enter untuk baris baru)"
-            className="flex-1 bg-slate-100 border border-slate-200 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all text-slate-800 resize-none min-h-[44px] max-h-32 custom-scrollbar"
-            disabled={isSending || showTopicPicker} rows={1}
+            value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+            placeholder="Ketik pesan..."
+            className="flex-1 bg-slate-100 border border-slate-200 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all resize-none min-h-[44px] max-h-32 custom-scrollbar"
+            disabled={isSending} rows={1}
           />
-          <button type="submit" disabled={!newMessage.trim() || isSending || showTopicPicker} className="h-11 w-11 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white rounded-full flex items-center justify-center transition-colors shadow-sm shrink-0">
+          <button type="submit" disabled={!newMessage.trim() || isSending} className="h-11 w-11 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white rounded-full flex items-center justify-center transition-colors shadow-sm shrink-0">
             {isSending ? <div className="h-5 w-5 border-2 border-white border-t-transparent animate-spin rounded-full"></div> : <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 ml-0.5"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" /></svg>}
           </button>
         </form>
       </footer>
-
-      {/* POPUP OVERLAY UNTUK MEMILIH SKRIPSI DI AWAL CHAT */}
-      {showTopicPicker && (
-        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-4">
-          <div className="bg-white w-full sm:max-w-md rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl p-6 sm:p-8 animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
-            <div className="h-12 w-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4 border border-emerald-200">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
-            </div>
-            <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">Pilih Topik Konsultasi</h2>
-            <p className="text-sm text-slate-500 mt-2 mb-6 leading-relaxed">Pilih hasil generate skripsi yang ingin kamu bahas dengan analis agar mereka bisa langsung memahami konteksnya.</p>
-            
-            <div className="space-y-2 mb-8 max-h-[35vh] overflow-y-auto custom-scrollbar pr-2">
-              {userHistory.length > 0 ? userHistory.map((hist) => (
-                <label key={hist.id} className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${selectedTopics.includes(hist.id) ? 'bg-emerald-50 border-emerald-500 shadow-sm' : 'bg-white border-slate-200 hover:border-emerald-300'}`}>
-                  <input 
-                    type="checkbox" 
-                    checked={selectedTopics.includes(hist.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) setSelectedTopics([...selectedTopics, hist.id]);
-                      else setSelectedTopics(selectedTopics.filter(id => id !== hist.id));
-                    }}
-                    className="mt-1 w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-bold truncate ${selectedTopics.includes(hist.id) ? 'text-emerald-900' : 'text-slate-700'}`}>{hist.judul}</p>
-                    <p className="text-[10px] text-slate-400 mt-1">{new Date(hist.created_at).toLocaleDateString('id-ID')}</p>
-                  </div>
-                </label>
-              )) : (
-                <div className="p-4 bg-slate-50 border border-slate-200 border-dashed rounded-xl text-center">
-                  <p className="text-xs font-semibold text-slate-500">Kamu belum pernah membuat/generate dokumen skripsi.</p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <button 
-                onClick={() => handleStartWithTopic(true)}
-                disabled={isSubmittingTopic || (userHistory.length > 0 && selectedTopics.length === 0)}
-                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 disabled:text-slate-500 text-white rounded-xl text-sm font-bold transition-all shadow-sm flex justify-center items-center gap-2"
-              >
-                {isSubmittingTopic ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/50 border-t-white"></div> : 'Gunakan Pilihan Ini'}
-              </button>
-              <button 
-                onClick={() => handleStartWithTopic(false)}
-                disabled={isSubmittingTopic}
-                className="w-full py-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-sm font-bold transition-all"
-              >
-                Lanjut Tanpa Skripsi
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
