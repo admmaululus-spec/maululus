@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
+
 export const runtime = 'edge';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || '' });
 
 export async function POST(req: Request) {
   try {
@@ -13,55 +14,47 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Universitas dan Jurusan harus diisi' }, { status: 400 });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-    const promptText = `
-      Kamu adalah Dosen Penguji Senior sekaligus asisten akademik ahli di ${universitas}.
-      
-      Tugas Pertamamu: Analisis input program studi/jurusan berikut: "${jurusan}".
-      Jika input tersebut typo parah, tidak masuk akal (misal: "makan nasi", "asdfg"), di luar konteks akademik, atau bukan nama jurusan yang lazim, kamu WAJIB menolak dan memberikan teguran.
-      
-      Tugas Keduamu: Jika jurusan valid, buatkan 3 ide judul untuk ${jenisKarya || 'S1 - Skripsi'} yang inovatif dan ANTI-PASARAN khusus untuk standar ${universitas}.
-      ${minat ? `Topik spesifik/minat: "${minat}".` : ''}
-      ${masalah ? `Masalah/Fenomena: "${masalah}".` : ''}
-      ${metodologi && metodologi !== 'Bebas (AI yang tentukan)' ? `Metodologi wajib: "${metodologi}".` : ''}
-      
-      Kriteria Ketat: Tingkat kedalaman WAJIB disesuaikan untuk ${jenisKarya || 'S1 - Skripsi'}. Hindari judul klise yang sudah menumpuk di perpustakaan kampus tersebut, namun hindari juga penggunaan kata yang tidak lazim terutama untuk skripsi S-1 buat lebih mudah untuk acc ke dosen.
-
-      ATURAN BALASAN (WAJIB JSON FORMAT MURNI):
-      Jika JURUSAN TIDAK VALID, balas dengan format ini:
-      {
-        "status": "invalid",
-        "pesan": "Tuliskan pesan teguran halus. Contoh: 'Hmm, sepertinya [input] bukan nama program studi yang wajar. Apakah maksudmu jurusan terkait?'"
-      }
-
-      Jika JURUSAN VALID, balas dengan format ini:
-      {
-        "status": "success",
-        "data": [
-          {
-            "judul": "Judul Skripsi 1",
-            "alasan": "Alasan akademis yang meyakinkan mengapa judul ini sangat relevan dan menarik.",
-            "novelty_check": "Analisis kebaruan: Jelaskan secara singkat kenapa judul ini belum banyak diteliti di ${universitas} atau apa pembedanya dari skripsi terdahulu."
-          }
-        ]
-      }
-      
-      Keluarkan HANYA format JSON murni, tanpa backticks (\`\`\`), tanpa teks pembuka/penutup.
-    `;
-
-    const result = await model.generateContent(promptText);
-    const textOutput = await result.response.text();
-
-    try {
-      // Membersihkan potensi markdown code blocks dari AI sebelum parse
-      const cleanJsonString = textOutput.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsedData = JSON.parse(cleanJsonString);
-      return NextResponse.json(parsedData);
-    } catch (parseError) {
-      console.error("Gagal parse JSON dari AI:", textOutput);
-      return NextResponse.json({ error: `Format balasan AI salah atau tidak mengenali instruksi JSON.` }, { status: 500 });
+    const systemPrompt = `Kamu adalah Dosen Penguji Senior sekaligus asisten akademik ahli di ${universitas}.
+    Keluarkan HANYA format JSON Object murni. Tidak boleh ada teks pembuka/penutup.
+    
+    ATURAN BALASAN (JSON OBJECT):
+    Jika JURUSAN TIDAK VALID (typo parah, tidak masuk akal, bukan prodi wajar), balas:
+    {
+      "status": "invalid",
+      "pesan": "Hmm, sepertinya itu bukan nama program studi yang wajar. Apakah maksudmu jurusan terkait?"
     }
+
+    Jika JURUSAN VALID, buatkan 3 ide judul yang inovatif, ANTI-PASARAN namun masuk akal, balas:
+    {
+      "status": "success",
+      "data": [
+        {
+          "judul": "...",
+          "alasan": "...",
+          "novelty_check": "..."
+        }
+      ]
+    }`;
+
+    let userContent = `Analisis jurusan: "${jurusan}". Buat judul untuk ${jenisKarya || 'S1 - Skripsi'}.`;
+    if (minat) userContent += `\nMinat/Topik: "${minat}"`;
+    if (masalah) userContent += `\nMasalah: "${masalah}"`;
+    if (metodologi && metodologi !== 'Bebas (AI yang tentukan)') userContent += `\nMetodologi: "${metodologi}"`;
+
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent }
+      ],
+      model: 'llama-3.3-70b-versatile',
+      response_format: { type: 'json_object' }, // Garansi tidak akan error JSON.parse
+      temperature: 0.6, // Sedikit dinaikkan agar judulnya lebih kreatif
+    });
+
+    const textOutput = chatCompletion.choices[0]?.message?.content || '{}';
+    const parsedData = JSON.parse(textOutput);
+    
+    return NextResponse.json(parsedData);
 
   } catch (error: any) {
     console.error('Error server API:', error);
