@@ -8,9 +8,15 @@ import Link from 'next/link';
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // States Profil & E-Wallet
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string>('');
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [userPhoto, setUserPhoto] = useState<string>('');
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -20,6 +26,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         router.replace('/auth');
         return;
       }
+
+      setUserEmail(session.user.email || 'Pengguna');
 
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -35,8 +43,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       const currentRole = profile.role?.toLowerCase();
       setUserRole(currentRole);
 
-      // Otorisasi hanya untuk Admin atau Analis
       if (currentRole === 'admin' || currentRole === 'analyst' || currentRole === 'analis') {
+        
+        // --- AMBIL DATA E-WALLET (KOIN) ---
+        const { data: userData } = await supabase
+          .from('users_data')
+          .select('koin')
+          .eq('id', session.user.id)
+          .single();
+        if (userData) setWalletBalance(userData.koin);
+
+        // --- AMBIL FOTO PROFIL KHUSUS ANALIS ---
+        if (currentRole === 'analyst' || currentRole === 'analis') {
+          const { data: analystData } = await supabase
+            .from('analyst_profiles')
+            .select('photo_url')
+            .eq('user_id', session.user.id)
+            .single();
+          if (analystData?.photo_url) setUserPhoto(analystData.photo_url);
+        }
+
         setIsAuthorized(true);
         setIsLoading(false);
       } else {
@@ -47,6 +73,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     checkAdmin();
   }, [router]);
 
+  const handleLogout = async () => {
+    if(confirm('Yakin ingin keluar dari ruang kerja?')) {
+      await supabase.auth.signOut();
+      router.replace('/auth');
+    }
+  };
+
   if (isLoading) return (
     <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
       <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600"></div>
@@ -56,13 +89,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (!isAuthorized) return null;
 
   const isAdmin = userRole === 'admin';
-  // Deteksi khusus agar UI Chat Management bisa mengambil tinggi penuh tanpa terpotong padding
   const isChatRoom = pathname?.includes('/admin/chat');
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex overflow-hidden">
+      
+      {/* SIDEBAR UTAMA */}
       <aside className="w-64 bg-slate-900 text-slate-400 flex flex-col fixed h-full z-50 border-r border-slate-800/50 shadow-2xl">
-        <div className="p-8 pb-6">
+        <div className="p-8 pb-6 shrink-0">
           <div className="text-2xl font-black text-white tracking-tight">Mau<span className="text-blue-500">lulus</span></div>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1.5">
             {isAdmin ? 'Admin Panel' : 'Analyst Workspace'}
@@ -79,7 +113,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 Overview Stats
               </Link>
 
-              {/* Menggabungkan rute /admin/users dan /admin/analis di bawah satu menu agar Admin tetap bisa mengelola Analis */}
               <Link href="/admin/users" className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200 ${pathname?.includes('/admin/users') || pathname?.includes('/admin/analis') ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20' : 'hover:bg-slate-800 hover:text-slate-200'}`}>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
                 Kelola User & Analis
@@ -105,12 +138,46 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
               <Link href="/admin/analis" className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200 ${pathname === '/admin/analis' ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20' : 'hover:bg-slate-800 hover:text-slate-200'}`}>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
-                Profil Publik Saya
+                Pengaturan Profil Saya
               </Link>
             </>
           )}
-
         </nav>
+
+        {/* ================= BAGIAN BAWAH: E-WALLET & AKUN ================= */}
+        <div className="p-5 border-t border-slate-800/60 bg-slate-900/50 shrink-0">
+          
+          {/* Box E-Wallet */}
+          <div className="bg-slate-800/80 rounded-xl p-3.5 mb-4 flex items-center justify-between border border-slate-700/50 shadow-inner">
+            <div className="flex items-center gap-2.5">
+              <span className="bg-emerald-500/20 text-emerald-400 h-7 w-7 rounded-lg flex items-center justify-center text-sm">🪙</span>
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">E-Wallet</span>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-black text-white">{walletBalance} Koin</p>
+            </div>
+          </div>
+
+          {/* Profil Mini & Logout */}
+          <div className="flex items-center gap-3">
+            <img 
+              src={userPhoto || 'https://via.placeholder.com/40'} 
+              alt="Profil" 
+              className="h-10 w-10 rounded-full object-cover border border-slate-700"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white truncate">{userEmail.split('@')[0]}</p>
+              <button 
+                onClick={handleLogout} 
+                className="text-xs font-semibold text-red-400 hover:text-red-300 transition-colors mt-0.5 flex items-center gap-1"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
+                Keluar Aplikasi
+              </button>
+            </div>
+          </div>
+
+        </div>
       </aside>
 
       {/* Main Container dengan Padding Dinamis */}

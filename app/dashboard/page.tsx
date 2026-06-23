@@ -7,7 +7,8 @@ import Link from 'next/link';
 
 // --- TYPES DEKLARASI ---
 type RiwayatItem = { id: string; judul: string; outline: any; is_unlocked: boolean; created_at: string };
-type Analyst = { id: string; name: string; expertise: string; price: number; photo_url: string; is_wa_enabled: boolean; wa_number: string };
+// Tambahkan user_id agar kita tahu dompet (E-Wallet) mana yang harus ditransfer koinnya
+type Analyst = { id: string; user_id: string; name: string; expertise: string; price: number; photo_url: string; is_wa_enabled: boolean; wa_number: string };
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -47,7 +48,8 @@ export default function DashboardPage() {
         const [userRes, historyRes, analystsRes] = await Promise.all([
           supabase.from('users_data').select('*').eq('id', currentUserId).maybeSingle(),
           supabase.from('history_skripsi').select('*').eq('user_id', currentUserId).order('created_at', { ascending: false }),
-          supabase.from('analyst_profiles').select('id, name, expertise, price, photo_url, is_wa_enabled, wa_number').order('created_at', { ascending: false })
+          // Tambahkan user_id di kueri select di bawah ini
+          supabase.from('analyst_profiles').select('id, user_id, name, expertise, price, photo_url, is_wa_enabled, wa_number').order('created_at', { ascending: false })
         ]);
 
         // 4. Handle Sinkronisasi Tabel User (Jika belum ada di users_data)
@@ -142,11 +144,22 @@ export default function DashboardPage() {
 
     setIsProcessing(`chat_${analis.id}`);
     try {
-      // 1. Potong koin
+      // 1. Potong koin dari mahasiswa
       const { error: koinError } = await supabase.from('users_data').update({ koin: koin - analis.price }).eq('id', userId);
       if (koinError) throw koinError;
       
       setKoin(prev => prev - analis.price);
+
+      // --- LOGIKA TRANSFER KOIN KE E-WALLET ANALIS ---
+      if (analis.user_id) {
+        // Cek saldo analis saat ini
+        const { data: dataAnalis } = await supabase.from('users_data').select('koin').eq('id', analis.user_id).single();
+        const koinAnalisSaatIni = dataAnalis?.koin || 0;
+        
+        // Tambahkan koin ke dompet analis
+        await supabase.from('users_data').update({ koin: koinAnalisSaatIni + analis.price }).eq('id', analis.user_id);
+      }
+      // -----------------------------------------------
 
       // 2. BUAT SESI CHAT BARU DI DATABASE
       const { data: newSession, error: sessionError } = await supabase
