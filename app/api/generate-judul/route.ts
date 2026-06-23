@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Universitas dan Jurusan harus diisi' }, { status: 400 });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const promptText = `
       Kamu adalah Dosen Penguji Senior sekaligus asisten akademik ahli di ${universitas}.
