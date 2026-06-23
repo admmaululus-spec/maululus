@@ -186,17 +186,17 @@ function OutlineContent() {
             </div>
 
             <div className="absolute bottom-0 left-0 right-0 h-[450px] bg-gradient-to-t from-white via-white/95 to-transparent flex flex-col items-center justify-end pb-8 px-6">
-              <div className="pointer-events-auto w-full max-w-md rounded-3xl bg-brand-navy p-8 text-center shadow-2xl transform transition-transform hover:-translate-y-1 border border-slate-700 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-emerald via-green-400 to-brand-emerald"></div>
+              <div className="pointer-events-auto w-full max-w-md rounded-3xl bg-slate-900 p-8 text-center shadow-2xl transform transition-transform hover:-translate-y-1 border border-slate-700 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 via-green-400 to-emerald-400"></div>
                 <div className="text-5xl mb-4">🔒</div>
                 <h4 className="text-2xl font-extrabold text-white mb-2">Simpan & Buka Akses</h4>
                 <p className="text-slate-300 text-sm mb-6 leading-relaxed">
-                  Gunakan <span className="font-bold text-brand-emerald">1 Koin</span> untuk membuka struktur detail beserta fitur Copy/Download.
+                  Gunakan <span className="font-bold text-emerald-400">1 Koin</span> untuk membuka struktur detail beserta fitur Copy/Download.
                 </p>
                 
                 <button 
                   onClick={handleSaveAndContinue}
-                  className="w-full rounded-2xl bg-brand-emerald px-6 py-4 font-bold text-white hover:bg-green-600 transition-all shadow-lg shadow-brand-emerald/20 active:scale-95 flex justify-center items-center gap-2 mb-6"
+                  className="w-full rounded-2xl bg-emerald-500 px-6 py-4 font-bold text-white hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-95 flex justify-center items-center gap-2 mb-6"
                 >
                   {isLoggedIn ? 'Simpan ke Dashboard' : 'Login & Simpan'}
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
@@ -207,7 +207,7 @@ function OutlineContent() {
                   <p className="text-slate-400 text-sm mb-3">Ragu dengan hasil AI ini?</p>
                   <button 
                     onClick={mulaiKonsultasi}
-                    className="w-full rounded-xl bg-transparent border-2 border-brand-emerald px-4 py-3 font-bold text-brand-emerald hover:bg-brand-emerald hover:text-white transition-colors flex justify-center items-center gap-2"
+                    className="w-full rounded-xl bg-slate-800 border-2 border-slate-600 px-4 py-3 font-bold text-slate-200 hover:bg-slate-700 hover:text-white transition-colors flex justify-center items-center gap-2 active:scale-95"
                   >
                     Konsultasi dengan Analis
                   </button>
