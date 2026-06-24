@@ -68,12 +68,12 @@ export default function PromoPopup() {
         if (updateError) throw updateError;
       }
 
-      // Berikan koin hanya jika nominal reward lebih besar dari 0
+      // ✨ PERBAIKAN: Menggunakan kolom 'koin', bukan 'coins' ✨
       if (activePromo.reward_amount > 0) {
-        const totalNewCoins = (userProfile.coins || 0) + activePromo.reward_amount;
+        const totalNewCoins = (userProfile.koin || 0) + activePromo.reward_amount;
         const { error: coinError } = await supabase
           .from('users_data')
-          .update({ coins: totalNewCoins })
+          .update({ koin: totalNewCoins })
           .eq('id', userProfile.id);
 
         if (coinError) throw coinError;
@@ -99,7 +99,6 @@ export default function PromoPopup() {
 
   if (!isOpen || !activePromo) return null;
 
-  // Normalisasi URL agar aman diklik
   const getSafeUrl = (url: string) => {
     if (!url) return '#';
     return url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
@@ -119,7 +118,6 @@ export default function PromoPopup() {
         <h3 className="text-xl font-black text-slate-900 mt-3 leading-snug">{activePromo.title}</h3>
         <p className="text-slate-400 text-xs mt-2 leading-relaxed px-2">{activePromo.description}</p>
 
-        {/* ✨ TOMBOL KUSTOM OPSIONAL MUNCUL DI SINI ✨ */}
         {activePromo.action_link && activePromo.action_button_text && (
           <div className="mt-4">
             <a 
