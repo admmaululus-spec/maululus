@@ -315,7 +315,7 @@ export default function AdminAnalis() {
                     {formData.photo_url && <img src={formData.photo_url} alt="Preview" className="h-16 w-16 rounded-full object-cover border border-slate-200" />}
                     <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
                     <button type="button" onClick={() => fileInputRef.current?.click()} className="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-colors">
-                      {isUploading ? 'Mengompres...' : 'Pilih Foto (Auto Compress)'}
+                      {isUploading ? 'Mengompres...' : 'Pilih Foto'}
                     </button>
                   </div>
                 </div>
