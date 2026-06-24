@@ -19,7 +19,12 @@ export default function CopilotPage() {
   const [isPro, setIsPro] = useState<boolean | null>(null);
   const [isLoadingCheck, setIsLoadingCheck] = useState(true);
   
+  // State Input
+  const [judulSkripsi, setJudulSkripsi] = useState('');
+  const [namaBab, setNamaBab] = useState('');
   const [inputText, setInputText] = useState('');
+  
+  // State Output
   const [outputText, setOutputText] = useState('');
   const [isLoadingAI, setIsLoadingAI] = useState(false);
 
@@ -37,16 +42,26 @@ export default function CopilotPage() {
   const handleProcess = async (action: 'paraphrase' | 'expand' | 'formalize') => {
     if (!inputText.trim()) return alert('Input teks kosong!');
     setIsLoadingAI(true);
+    
     try {
       const response = await fetch('/api/copilot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: inputText, action }),
+        body: JSON.stringify({ 
+          text: inputText, 
+          action: action,
+          // Mengirimkan konteks ke API agar AI tahu arah skripsinya
+          judulSkripsi: judulSkripsi.trim() || 'Tidak disebutkan spesifik',
+          namaBab: namaBab.trim() || 'Bagian acak'
+        }),
       });
       const data = await response.json();
+      
+      if (data.error) throw new Error(data.error);
       setOutputText(data.result);
-    } catch (e) {
-      alert("Gagal memproses AI");
+      
+    } catch (e: any) {
+      alert(`Gagal memproses AI: ${e.message}`);
     } finally {
       setIsLoadingAI(false);
     }
@@ -81,13 +96,32 @@ export default function CopilotPage() {
           
           {/* EDITOR SECTION */}
           <div className="flex flex-col gap-4">
-            <div className="flex justify-between items-center h-4">
-              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Draf Teks</h2>
-              <button onClick={() => setInputText('')} className="text-[10px] font-bold text-red-400 hover:text-red-600 uppercase">Hapus</button>
+            
+            {/* --- INPUT KONTEKS SKRIPSI --- */}
+            <div className="flex gap-3 animate-in fade-in slide-in-from-top-2">
+              <input 
+                type="text" 
+                placeholder="Judul Skripsi (Opsional: untuk konteks AI)" 
+                value={judulSkripsi}
+                onChange={(e) => setJudulSkripsi(e.target.value)}
+                className="flex-[2] bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-700 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all"
+              />
+              <input 
+                type="text" 
+                placeholder="Bab/Bagian" 
+                value={namaBab}
+                onChange={(e) => setNamaBab(e.target.value)}
+                className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-700 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all"
+              />
+            </div>
+
+            <div className="flex justify-between items-center h-4 mt-2">
+              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Draf Teks Utama</h2>
+              <button onClick={() => setInputText('')} className="text-[10px] font-bold text-red-400 hover:text-red-600 uppercase transition-colors">Hapus</button>
             </div>
             
             <textarea 
-              className="flex-1 w-full bg-white border border-slate-200 rounded-2xl p-6 text-sm text-slate-700 outline-none resize-none focus:border-slate-400 transition-all leading-relaxed shadow-sm"
+              className="flex-1 w-full bg-white border border-slate-200 rounded-2xl p-6 text-sm text-slate-700 outline-none resize-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all leading-relaxed shadow-sm custom-scrollbar"
               placeholder="Masukkan draf paragraf, poin materi, atau teks kutipan di sini..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
@@ -108,16 +142,18 @@ export default function CopilotPage() {
           
           {/* RESULT SECTION */}
           <div className="flex flex-col gap-4">
-            <div className="flex justify-between items-center h-4">
+            <div className="flex justify-between items-center h-4 mt-12 sm:mt-0">
               <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Keluaran AI</h2>
-              {outputText && <button onClick={() => {navigator.clipboard.writeText(outputText); alert("Teks disalin ke clipboard!");}} className="text-[10px] font-bold text-indigo-500 hover:text-indigo-600 uppercase">Copy Teks</button>}
+              {outputText && <button onClick={() => {navigator.clipboard.writeText(outputText); alert("Teks disalin ke clipboard!");}} className="text-[10px] font-bold text-indigo-500 hover:text-indigo-600 uppercase transition-colors">Copy Teks</button>}
             </div>
             
-            <div className="flex-1 bg-slate-900 border border-slate-800 rounded-2xl p-8 text-slate-300 text-sm leading-loose overflow-y-auto whitespace-pre-line shadow-inner">
+            <div className="flex-1 bg-slate-900 border border-slate-800 rounded-2xl p-8 text-slate-300 text-sm leading-loose overflow-y-auto whitespace-pre-line shadow-inner custom-scrollbar relative">
               {isLoadingAI ? (
-                <div className="flex items-center gap-3 opacity-50">
-                  <div className="h-3 w-3 animate-pulse bg-slate-600 rounded-full"></div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Memproses Permintaan...</span>
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm rounded-2xl z-10">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-600 border-t-emerald-500"></div>
+                    <span className="text-xs font-bold uppercase tracking-widest text-emerald-400 animate-pulse">Menyusun Teks...</span>
+                  </div>
                 </div>
               ) : outputText || (
                 <div className="h-full flex items-center justify-center text-slate-600 italic font-medium text-xs">Pilih mode aksi di panel sebelah kiri untuk memproses teks.</div>
