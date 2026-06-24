@@ -40,38 +40,55 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         return;
       }
 
-      const currentRole = profile.role?.toLowerCase();
+      const currentRole = profile.role?.toLowerCase() || 'user';
       setUserRole(currentRole);
 
-      if (currentRole === 'admin' || currentRole === 'analyst' || currentRole === 'analis') {
-        
-        // --- AMBIL DATA KOIN ---
-        const { data: userData } = await supabase
-          .from('users_data')
-          .select('koin')
-          .eq('id', session.user.id)
-          .single();
-        if (userData) setWalletBalance(userData.koin);
+      // ========================================================
+      // STRICT ROUTING & ROLE AUTHORIZATION RULE
+      // ========================================================
+      const isPathAdminRoot = pathname === '/admin';
+      const isPathAnalystZone = pathname?.startsWith('/admin/analis') || pathname?.startsWith('/admin/chat');
+      const isPathAdminZone = pathname?.startsWith('/admin');
 
-        // --- AMBIL FOTO PROFIL KHUSUS ANALIS ---
-        if (currentRole === 'analyst' || currentRole === 'analis') {
-          const { data: analystData } = await supabase
-            .from('analyst_profiles')
-            .select('photo_url')
-            .eq('user_id', session.user.id)
-            .single();
-          if (analystData?.photo_url) setUserPhoto(analystData.photo_url);
-        }
-
+      if (currentRole === 'admin') {
+        // Admin bebas di seluruh area /admin
         setIsAuthorized(true);
-        setIsLoading(false);
+      } else if (currentRole === 'analyst' || currentRole === 'analis') {
+        // Analis HANYA boleh di /admin/analis atau /admin/chat
+        if (isPathAdminRoot || (!isPathAnalystZone && isPathAdminZone)) {
+          router.replace('/admin/chat'); // Tendang ke halaman default analis
+          return;
+        }
+        setIsAuthorized(true);
       } else {
+        // User biasa atau role lain tidak boleh masuk /admin sama sekali
         router.replace('/dashboard');
+        return;
       }
+
+      // --- AMBIL DATA KOIN ---
+      const { data: userData } = await supabase
+        .from('users_data')
+        .select('koin')
+        .eq('id', session.user.id)
+        .single();
+      if (userData) setWalletBalance(userData.koin);
+
+      // --- AMBIL FOTO PROFIL KHUSUS ANALIS ---
+      if (currentRole === 'analyst' || currentRole === 'analis') {
+        const { data: analystData } = await supabase
+          .from('analyst_profiles')
+          .select('photo_url')
+          .eq('user_id', session.user.id)
+          .single();
+        if (analystData?.photo_url) setUserPhoto(analystData.photo_url);
+      }
+
+      setIsLoading(false);
     };
     
     checkAdmin();
-  }, [router]);
+  }, [router, pathname]); // Pastikan pathname ada di dependency array
 
   const handleLogout = async () => {
     if(confirm('Yakin ingin keluar dari ruang kerja?')) {
@@ -133,7 +150,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 Export WA & Mail
               </Link>
 
-              {/* ✨ TOMBOL POP-UP PROMO BARU ✨ */}
               <Link href="/admin/promos" className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200 ${pathname?.includes('/admin/promos') ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20' : 'hover:bg-slate-800 hover:text-slate-200'}`}>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" /></svg>
                 Pop-Up Promo
@@ -158,7 +174,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* ================= BAGIAN BAWAH: E-WALLET & AKUN ================= */}
         <div className="p-5 border-t border-slate-800/60 bg-slate-900/50 shrink-0">
           
-          {/* Box E-Wallet / Pendapatan Dinamis */}
           <div className="bg-slate-800/80 rounded-xl p-3.5 mb-4 flex items-center justify-between border border-slate-700/50 shadow-inner">
             <div className="flex items-center gap-2.5">
               <span className={`${isAdmin ? 'bg-blue-500/20 text-blue-400' : 'bg-emerald-500/20 text-emerald-400'} h-7 w-7 rounded-lg flex items-center justify-center text-sm`}>
@@ -173,7 +188,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
 
-          {/* Profil Mini & Logout */}
           <div className="flex items-center gap-3">
             <img 
               src={userPhoto || 'https://via.placeholder.com/40'} 
