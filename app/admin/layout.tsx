@@ -165,7 +165,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {isAdmin ? '💎' : '💰'}
               </span>
               <span className={`text-[11px] font-bold uppercase tracking-widest ${isAdmin ? 'text-slate-400' : 'text-emerald-400'}`}>
-                {isAdmin ? 'Total Koin User' : 'Pendapatan'}
+                {isAdmin ? 'Total Pendapatan' : 'Pendapatan'}
               </span>
             </div>
             <div className="text-right">
