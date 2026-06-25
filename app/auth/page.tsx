@@ -21,7 +21,7 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false); 
   
   // States Loading & Notifikasi
-  const [isLoading, setIsLoading] = useState(true); // Default true untuk cek sesi awal
+  const [isLoading, setIsLoading] = useState(true); 
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   
@@ -42,6 +42,32 @@ export default function AuthPage() {
     checkUser();
   }, [router]);
 
+  // ✨ HELPER: Smart Routing untuk menghindari duplikasi kode ✨
+  const routeUserBasedOnRole = async (userId: string) => {
+    // FIX: Gunakan maybeSingle() alih-alih single(). 
+    // Pada pengguna baru, tabel profiles mungkin belum terbuat seketika oleh trigger. 
+    // maybeSingle() akan me-return null (tidak melempar error throw) jika baris belum ada.
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle(); 
+
+    if (profileError) {
+      console.error("Gagal mengambil profil:", profileError);
+    }
+
+    const role = profile?.role?.toLowerCase();
+
+    if (role === 'admin') {
+      router.replace('/admin'); 
+    } else if (role === 'analyst' || role === 'analis') {
+      router.replace('/admin/analis');
+    } else {
+      router.replace('/dashboard');
+    }
+  };
+
   // Handler Login/Register Email & Password
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +75,8 @@ export default function AuthPage() {
     setErrorMsg('');
     setSuccessMsg('');
     setShowResend(false);
+
+    let isNavigating = false; // Flag mencegah tombol aktif sebelum halaman berganti
 
     try {
       if (isLogin) {
@@ -64,29 +92,9 @@ export default function AuthPage() {
           throw error;
         }
 
-        // ✨ SMART ROUTING ✨
         if (authData.session) {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', authData.session.user.id)
-            .single();
-
-          if (profileError) {
-            console.error("Gagal mengambil profil:", profileError);
-            router.replace('/dashboard'); 
-            return;
-          }
-
-          const role = profile?.role?.toLowerCase();
-
-          if (role === 'admin') {
-            router.replace('/admin'); 
-          } else if (role === 'analyst' || role === 'analis') {
-            router.replace('/admin/analis');
-          } else {
-            router.replace('/dashboard');
-          }
+          isNavigating = true;
+          await routeUserBasedOnRole(authData.session.user.id);
         }
 
       } else {
@@ -98,13 +106,20 @@ export default function AuthPage() {
           throw new Error('Nomor WhatsApp tidak valid (Gunakan awalan 08... atau 62...)');
         }
 
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: { data: { whatsapp: whatsapp } }
         });
         
         if (error) throw error;
+
+        // Jika auto-login via signUp aktif (Confirm Email disabled di dashboard Supabase)
+        if (data.session) {
+          isNavigating = true;
+          await routeUserBasedOnRole(data.session.user.id);
+          return;
+        }
         
         setSuccessMsg('Pendaftaran berhasil! Silakan cek Email Anda untuk mengaktifkan akun.');
         setIsLogin(true); 
@@ -119,7 +134,10 @@ export default function AuthPage() {
     } catch (error: any) {
       setErrorMsg(error.message || 'Terjadi kesalahan saat autentikasi.');
     } finally {
-      setIsLoading(false);
+      // Hanya matikan loading jika tidak sedang dialihkan (menghindari UI berkedip)
+      if (!isNavigating) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -148,11 +166,12 @@ export default function AuthPage() {
 
   // ✨ HANDLER BARU: Login Google via ID Token
   const handleGoogleSuccess = async (credentialResponse: any) => {
+    let isNavigating = false;
+    
     try {
       setIsLoading(true);
       setErrorMsg('');
       
-      // Tukarkan ID Token dari Google dengan Sesi Supabase
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: credentialResponse.credential,
@@ -160,31 +179,16 @@ export default function AuthPage() {
 
       if (error) throw error;
 
-      // Gunakan SMART ROUTING yang sama persis seperti login Email
       if (data.session) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.session.user.id)
-          .single();
-
-        if (profileError) {
-          router.replace('/dashboard');
-          return;
-        }
-
-        const role = profile?.role?.toLowerCase();
-        if (role === 'admin') {
-          router.replace('/admin'); 
-        } else if (role === 'analyst' || role === 'analis') {
-          router.replace('/admin/analis');
-        } else {
-          router.replace('/dashboard');
-        }
+        isNavigating = true;
+        await routeUserBasedOnRole(data.session.user.id);
       }
     } catch (error: any) {
       setErrorMsg(error.message || 'Gagal masuk dengan Google.');
-      setIsLoading(false);
+    } finally {
+      if (!isNavigating) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -328,7 +332,7 @@ export default function AuthPage() {
             </div>
           </div>
 
-          {/* ✨ TOMBOL LOGIN GOOGLE YANG BARU ✨ */}
+          {/* TOMBOL LOGIN GOOGLE */}
           <div className="mt-8 flex justify-center w-full">
             <GoogleLogin
               onSuccess={handleGoogleSuccess}
