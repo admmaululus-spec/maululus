@@ -2,9 +2,10 @@
 import React from 'react';
 import Link from 'next/link';
 import { 
-  SparklesIcon, ToolItem, TargetIcon, PencilIcon, RefreshIcon, SummarizeIcon, MagnifyIcon, CitationIcon, ShieldCheckIcon, DocumentIcon, BookOpenIcon 
+  SparklesIcon, ToolItem, TargetIcon, PencilIcon, RefreshIcon, SummarizeIcon, MagnifyIcon, CitationIcon, ShieldCheckIcon, DocumentIcon, BookOpenIcon, AcademicCapIcon, UserTieIcon, ChartLineIcon, ChatBubbleIcon 
 } from './IconsAndUI';
 
+// ================= 1. TAB AI TOOLS =================
 export function TabAiTools({ koin }: any) {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 max-w-5xl mx-auto">
@@ -39,6 +40,7 @@ export function TabAiTools({ koin }: any) {
   );
 }
 
+// ================= 2. TAB DOKUMEN =================
 export function TabDokumen({ dokumenList, router, handleBukaKunci, isProcessing }: any) {
   return (
     <div className="animate-in fade-in max-w-5xl mx-auto space-y-6">
@@ -73,6 +75,7 @@ export function TabDokumen({ dokumenList, router, handleBukaKunci, isProcessing 
   );
 }
 
+// ================= 3. TAB JURNAL =================
 export function TabJurnal({ jurnalRefList, router }: any) {
   return (
     <div className="animate-in fade-in max-w-5xl mx-auto space-y-6">
@@ -103,6 +106,7 @@ export function TabJurnal({ jurnalRefList, router }: any) {
   );
 }
 
+// ================= 4. TAB PENGATURAN =================
 export function TabPengaturan({ userName, userEmail, userWhatsapp }: any) {
   return (
     <div className="animate-in fade-in max-w-2xl mx-auto space-y-6">
@@ -128,6 +132,97 @@ export function TabPengaturan({ userName, userEmail, userWhatsapp }: any) {
               <span className="font-semibold text-slate-800 text-sm">{userWhatsapp}</span>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================= 5. TAB EXPERT ASSISTANCE =================
+export function TabExpert() {
+  return (
+    <div className="animate-in fade-in max-w-5xl mx-auto space-y-8 pb-10">
+      <div className="flex items-center gap-3 mb-2">
+        <span className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl"><AcademicCapIcon /></span>
+        <div>
+          <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">Expert Assistance</h2>
+          <p className="text-sm text-slate-500">Layanan premium pendampingan penyusunan skripsi 1-on-1.</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm flex flex-col justify-between hover:border-emerald-200 transition-all group">
+           <div>
+             <h3 className="text-lg font-bold text-slate-800 mb-2">Paket Proposal</h3>
+             <p className="text-xs text-slate-500 mb-6 leading-relaxed">Fokus pengerjaan Bab 1 hingga Bab 3 untuk persiapan Sempro.</p>
+             <ul className="space-y-3 mb-8">
+               <li className="text-sm text-slate-700 flex items-center gap-2"><span className="text-emerald-500">✔</span> Pembuatan Judul</li>
+               <li className="text-sm text-slate-700 flex items-center gap-2"><span className="text-emerald-500">✔</span> Bab 1 - 3 & Daftar Pustaka</li>
+               <li className="text-sm text-slate-700 flex items-center gap-2"><span className="text-emerald-500">✔</span> Revisi Terstruktur</li>
+             </ul>
+           </div>
+           <Link href="/dashboard/upgrade" className="block text-center w-full py-3.5 bg-slate-50 text-emerald-700 font-bold rounded-xl border border-slate-200 hover:bg-emerald-50 transition-colors group-hover:border-emerald-200">
+             Mulai dari Rp1.850.000
+           </Link>
+        </div>
+
+        <div className="bg-[#0B1525] border border-blue-900 rounded-3xl p-8 shadow-xl flex flex-col justify-between transform lg:-translate-y-4">
+           <div>
+             <div className="flex items-center justify-between mb-2">
+               <h3 className="text-lg font-bold text-white">Paket Complete</h3>
+               <span className="bg-amber-400 text-amber-950 text-[9px] font-bold px-2 py-1 rounded-md">BEST SELLER</span>
+             </div>
+             <p className="text-xs text-slate-400 mb-6 leading-relaxed">Pengerjaan lengkap Bab 1 hingga Bab 5 termasuk analisis dan olah data.</p>
+             <ul className="space-y-3 mb-8">
+               <li className="text-sm text-white flex items-center gap-2"><span className="text-emerald-400">✔</span> Full Bab 1 sampai Bab 5</li>
+               <li className="text-sm text-white flex items-center gap-2"><span className="text-emerald-400">✔</span> Olah Data Statistik / Kualitatif</li>
+               <li className="text-sm text-white flex items-center gap-2"><span className="text-emerald-400">✔</span> PPT Sidang & Abstrak</li>
+             </ul>
+           </div>
+           <Link href="/dashboard/upgrade" className="block text-center w-full py-3.5 bg-blue-600 text-white font-bold rounded-xl shadow-md hover:bg-blue-500 transition-colors">
+             Pilih Paket Rp6.200.000
+           </Link>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm flex flex-col justify-between hover:border-emerald-200 transition-all group">
+           <div>
+             <h3 className="text-lg font-bold text-slate-800 mb-2">Paket Semhas</h3>
+             <p className="text-xs text-slate-500 mb-6 leading-relaxed">Melanjutkan pengerjaan Bab 4 dan 5 setelah sidang proposal.</p>
+             <ul className="space-y-3 mb-8">
+               <li className="text-sm text-slate-700 flex items-center gap-2"><span className="text-emerald-500">✔</span> Olah Data Penelitian</li>
+               <li className="text-sm text-slate-700 flex items-center gap-2"><span className="text-emerald-500">✔</span> Bab 4 - 5 & Kesimpulan</li>
+               <li className="text-sm text-slate-700 flex items-center gap-2"><span className="text-emerald-500">✔</span> Pendampingan Sidang Akhir</li>
+             </ul>
+           </div>
+           <Link href="/dashboard/upgrade" className="block text-center w-full py-3.5 bg-slate-50 text-emerald-700 font-bold rounded-xl border border-slate-200 hover:bg-emerald-50 transition-colors group-hover:border-emerald-200">
+             Mulai dari Rp4.200.000
+           </Link>
+        </div>
+      </div>
+
+      <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm mt-8">
+        <h3 className="font-bold text-slate-800 mb-6 text-center">Kenapa Memilih Expert Assistance?</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+           <div className="text-center">
+             <div className="w-12 h-12 mx-auto bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-3"><UserTieIcon /></div>
+             <h4 className="text-xs font-bold text-slate-800 mb-1">Dosen & Praktisi</h4>
+             <p className="text-[10px] text-slate-500">Dikerjakan oleh expert di bidang studimu.</p>
+           </div>
+           <div className="text-center">
+             <div className="w-12 h-12 mx-auto bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-3"><ChartLineIcon /></div>
+             <h4 className="text-xs font-bold text-slate-800 mb-1">Progress Transparan</h4>
+             <p className="text-[10px] text-slate-500">Pantau progres pengerjaan di dashboardmu.</p>
+           </div>
+           <div className="text-center">
+             <div className="w-12 h-12 mx-auto bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-3"><RefreshIcon /></div>
+             <h4 className="text-xs font-bold text-slate-800 mb-1">Garansi Revisi</h4>
+             <p className="text-[10px] text-slate-500">Sesuai arahan dan masukan dari dosen pembimbing.</p>
+           </div>
+           <div className="text-center">
+             <div className="w-12 h-12 mx-auto bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-3"><ChatBubbleIcon /></div>
+             <h4 className="text-xs font-bold text-slate-800 mb-1">Diskusi Fleksibel</h4>
+             <p className="text-[10px] text-slate-500">Komunikasi terarah lewat admin pendamping.</p>
+           </div>
         </div>
       </div>
     </div>

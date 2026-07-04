@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { BellIcon } from './IconsAndUI';
 import TabDashboard from './TabDashboard';
 import TabProyek from './TabProyek';
-import { TabAiTools, TabDokumen, TabJurnal, TabPengaturan } from './OtherTabs';
+import { TabAiTools, TabDokumen, TabJurnal, TabPengaturan, TabExpert } from './OtherTabs';
 
 export default function CenterContent({ activeMenu, setIsSidebarOpen, userName, userEmail, userWhatsapp, koin, riwayatList, premiumProjects, handleBukaKunci, isProcessing, router }: any) {
   
@@ -44,6 +44,7 @@ export default function CenterContent({ activeMenu, setIsSidebarOpen, userName, 
       {/* AREA SCROLL TAB */}
       <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#F8FAFC]">
         {activeMenu === 'dashboard' && <TabDashboard riwayatList={riwayatList} activeProject={activeProject} router={router} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} />}
+        {activeMenu === 'expert' && <TabExpert />}
         {activeMenu === 'proyek' && <TabProyek activeProject={activeProject} />}
         {activeMenu === 'ai-tools' && <TabAiTools koin={koin} />}
         {activeMenu === 'dokumen' && <TabDokumen dokumenList={dokumenList} router={router} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} />}

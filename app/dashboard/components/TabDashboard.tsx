@@ -1,7 +1,8 @@
 'use client';
 import React from 'react';
 import { 
-  SparklesIcon, AcademicCapIcon, ToolItem, PackageItem, FeatureIcon, TargetIcon, PencilIcon, RefreshIcon, FolderIcon, DocumentIcon 
+  SparklesIcon, AcademicCapIcon, ToolItem, PackageItem, FeatureIcon, TargetIcon, PencilIcon, RefreshIcon, FolderIcon, DocumentIcon,
+  PresentationIcon, UserTieIcon, ChartLineIcon, ChatBubbleIcon 
 } from './IconsAndUI';
 
 export default function TabDashboard({ riwayatList, activeProject, router, handleBukaKunci, isProcessing }: any) {
@@ -69,15 +70,15 @@ export default function TabDashboard({ riwayatList, activeProject, router, handl
               <h3 className="flex items-center gap-2 font-bold text-emerald-600 text-sm"><AcademicCapIcon /> PREMIUM ASSISTANCE</h3>
             </div>
             <div className="space-y-3 flex-1">
-              <PackageItem title="Paket Proposal (Sempro)" desc="Judul + Bab 1-3 + Mendeley + Revisi" price="Rp1.850.000" icon="📝" />
-              <PackageItem title="Paket Semhas" desc="Bab 4-5 + Olah Data + Abstrak + PPT + Revisi" price="Rp4.200.000" icon="📊" />
-              <PackageItem title="Paket Complete (Full Bab)" desc="Bab 1-5 + Olah Data + Mendeley + PPT + Revisi" price="Rp6.200.000" icon="🎓" isComplete />
+              <PackageItem title="Paket Proposal" desc="Judul + Bab 1-3 + Mendeley + Revisi" price="Rp1.850.000" icon={<DocumentIcon />} />
+              <PackageItem title="Paket Semhas" desc="Bab 4-5 + Olah Data + PPT + Revisi" price="Rp4.200.000" icon={<PresentationIcon />} />
+              <PackageItem title="Paket Complete" desc="Bab 1-5 + Olah Data + PPT + Revisi" price="Rp6.200.000" icon={<AcademicCapIcon />} isComplete />
             </div>
             <div className="grid grid-cols-4 gap-2 mt-5 text-center">
-               <FeatureIcon icon="🧑‍🏫" label="Dikerjakan Expert" />
-               <FeatureIcon icon="🔄" label="Revisi Terstruktur" />
-               <FeatureIcon icon="📈" label="Progress Tracking" />
-               <FeatureIcon icon="💬" label="Chat Admin" />
+               <FeatureIcon icon={<UserTieIcon />} label="Dikerjakan Expert" />
+               <FeatureIcon icon={<RefreshIcon />} label="Revisi Terstruktur" />
+               <FeatureIcon icon={<ChartLineIcon />} label="Progress Tracking" />
+               <FeatureIcon icon={<ChatBubbleIcon />} label="Chat Admin" />
             </div>
           </div>
         )}
