@@ -66,7 +66,7 @@ export function TabDokumen({ dokumenList, router, handleBukaKunci, isProcessing 
           </div>
         )) : (
           <div className="col-span-full py-16 bg-white border border-slate-200 border-dashed rounded-3xl text-center">
-            <p className="text-slate-500 text-sm mb-4">Anda belum memiliki dokumen hasil *generate* AI.</p>
+            <p className="text-slate-500 text-sm mb-4">Anda belum memiliki dokumen hasil AI.</p>
             <Link href="/generator" className="bg-blue-600 text-white px-6 py-2.5 rounded-xl text-xs font-bold hover:bg-blue-700">Buat Skripsi Baru</Link>
           </div>
         )}
@@ -76,7 +76,7 @@ export function TabDokumen({ dokumenList, router, handleBukaKunci, isProcessing 
 }
 
 // ================= 3. TAB JURNAL =================
-export function TabJurnal({ jurnalRefList, router }: any) {
+export function TabJurnal({ jurnalRefList, router, setActiveMenu }: any) {
   return (
     <div className="animate-in fade-in max-w-5xl mx-auto space-y-6">
       <div className="flex items-center gap-3 mb-6">
@@ -97,8 +97,8 @@ export function TabJurnal({ jurnalRefList, router }: any) {
           </div>
         )) : (
           <div className="py-16 bg-white border border-slate-200 border-dashed rounded-3xl text-center">
-            <p className="text-slate-500 text-sm mb-4">Riwayat pencarian jurnal dan sitasi Anda masih kosong.</p>
-            <button onClick={() => document.getElementById('ai-tools')?.click()} className="bg-blue-600 text-white px-6 py-2.5 rounded-xl text-xs font-bold hover:bg-blue-700">Buka AI Tools</button>
+            <p className="text-slate-500 text-sm mb-4">Riwayat pencarian jurnal Anda masih kosong.</p>
+            <button onClick={() => setActiveMenu('ai-tools')} className="bg-blue-600 text-white px-6 py-2.5 rounded-xl text-xs font-bold hover:bg-blue-700">Buka AI Tools</button>
           </div>
         )}
       </div>
@@ -175,7 +175,7 @@ export function TabExpert() {
              <p className="text-xs text-slate-400 mb-6 leading-relaxed">Pengerjaan lengkap Bab 1 hingga Bab 5 termasuk analisis dan olah data.</p>
              <ul className="space-y-3 mb-8">
                <li className="text-sm text-white flex items-center gap-2"><span className="text-emerald-400">✔</span> Full Bab 1 sampai Bab 5</li>
-               <li className="text-sm text-white flex items-center gap-2"><span className="text-emerald-400">✔</span> Olah Data Statistik / Kualitatif</li>
+               <li className="text-sm text-white flex items-center gap-2"><span className="text-emerald-400">✔</span> Olah Data Statistik</li>
                <li className="text-sm text-white flex items-center gap-2"><span className="text-emerald-400">✔</span> PPT Sidang & Abstrak</li>
              </ul>
            </div>

@@ -59,7 +59,6 @@ export default function DashboardPage() {
         setUserWhatsapp(userData?.whatsapp || 'Belum diatur');
         setPremiumProjects(proyekRes.data || []);
 
-        // Gabungkan Riwayat Skripsi & AI Tools, lalu urutkan terbaru
         const combinedHistory = [...(historyRes.data || []), ...(aiHistoryRes.data || [])];
         combinedHistory.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         setRiwayatList(combinedHistory);
@@ -116,7 +115,9 @@ export default function DashboardPage() {
   return (
     <div className="flex h-screen bg-[#F4F7FE] font-sans text-slate-800 overflow-hidden">
       <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} activeMenu={activeMenu} setActiveMenu={setActiveMenu} userName={userName} isPro={isPro} handleLogout={handleLogout} />
-      <CenterContent activeMenu={activeMenu} setIsSidebarOpen={setIsSidebarOpen} userName={userName} userEmail={userEmail} userWhatsapp={userWhatsapp} koin={koin} riwayatList={riwayatList} premiumProjects={premiumProjects} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} router={router} />
+      
+      <CenterContent activeMenu={activeMenu} setActiveMenu={setActiveMenu} setIsSidebarOpen={setIsSidebarOpen} userName={userName} userEmail={userEmail} userWhatsapp={userWhatsapp} koin={koin} riwayatList={riwayatList} premiumProjects={premiumProjects} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} router={router} />
+      
       <RightPanel activeMenu={activeMenu} koin={koin} isPro={isPro} />
     </div>
   );

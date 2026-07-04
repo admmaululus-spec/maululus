@@ -5,7 +5,7 @@ import {
   PresentationIcon, UserTieIcon, ChartLineIcon, ChatBubbleIcon 
 } from './IconsAndUI';
 
-export default function TabDashboard({ riwayatList, activeProject, router, handleBukaKunci, isProcessing }: any) {
+export default function TabDashboard({ riwayatList, activeProject, router, handleBukaKunci, isProcessing, setActiveMenu }: any) {
   return (
     <div className="animate-in fade-in space-y-6 max-w-5xl mx-auto">
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -16,7 +16,8 @@ export default function TabDashboard({ riwayatList, activeProject, router, handl
             <h3 className="flex items-center gap-2 font-bold text-blue-700 text-sm">
               <SparklesIcon /> AI TOOLS <span className="text-slate-500 text-xs font-normal">(Gunakan Koin)</span>
             </h3>
-            <button onClick={() => document.getElementById('ai-tools')?.click()} className="text-xs text-blue-600 font-semibold hover:underline">Lihat Semua Tools →</button>
+            {/* Perbaikan pada tombol ini */}
+            <button onClick={() => setActiveMenu('ai-tools')} className="text-xs text-blue-600 font-semibold hover:underline">Lihat Semua Tools →</button>
           </div>
           <div className="grid grid-cols-3 gap-4 mb-4">
             <ToolItem href="/generator" icon={<TargetIcon />} label="Buat Judul" isFree />
@@ -34,7 +35,8 @@ export default function TabDashboard({ riwayatList, activeProject, router, handl
           <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-slate-800 text-sm">Proyek Berjalan</h3>
-              <button onClick={() => document.getElementById('proyek')?.click()} className="text-xs text-blue-600 font-semibold hover:underline">Lihat Detail →</button>
+              {/* Perbaikan pada tombol ini */}
+              <button onClick={() => setActiveMenu('proyek')} className="text-xs text-blue-600 font-semibold hover:underline">Lihat Detail →</button>
             </div>
             <div className="flex gap-4">
               <div className="w-1/2">
