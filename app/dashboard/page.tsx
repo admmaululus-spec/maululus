@@ -7,7 +7,7 @@ import Sidebar from './components/Sidebar';
 import CenterContent from './components/CenterContent';
 import RightPanel from './components/RightPanel';
 
-type RiwayatItem = { id: string; judul: string; outline: any; is_unlocked: boolean; created_at: string };
+type RiwayatItem = { id: string; judul?: string; outline?: any; is_unlocked?: boolean; tool_name?: string; input_data?: string; result_data?: any; created_at: string };
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [koin, setKoin] = useState(0);
   const [isPro, setIsPro] = useState(false);
   const [riwayatList, setRiwayatList] = useState<RiwayatItem[]>([]);
+  const [premiumProjects, setPremiumProjects] = useState<any[]>([]);
 
   useEffect(() => {
     const initializeDashboard = async () => {
@@ -37,9 +38,11 @@ export default function DashboardPage() {
 
         await syncPendingData(currentUserId);
 
-        const [userRes, historyRes] = await Promise.all([
+        const [userRes, historyRes, proyekRes, aiHistoryRes] = await Promise.all([
           supabase.from('users_data').select('*').eq('id', currentUserId).maybeSingle(),
           supabase.from('history_skripsi').select('*').eq('user_id', currentUserId).order('created_at', { ascending: false }),
+          supabase.from('premium_projects').select('*').eq('user_id', currentUserId).eq('is_active', true).order('created_at', { ascending: false }),
+          supabase.from('ai_tools_history').select('*').eq('user_id', currentUserId).order('created_at', { ascending: false })
         ]);
 
         let userData = userRes.data;
@@ -54,7 +57,13 @@ export default function DashboardPage() {
         setKoin(userData?.koin || 0);
         setIsPro(userData?.is_pro || false);
         setUserWhatsapp(userData?.whatsapp || 'Belum diatur');
-        setRiwayatList(historyRes.data || []);
+        setPremiumProjects(proyekRes.data || []);
+
+        // Gabungkan Riwayat Skripsi & AI Tools, lalu urutkan terbaru
+        const combinedHistory = [...(historyRes.data || []), ...(aiHistoryRes.data || [])];
+        combinedHistory.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        setRiwayatList(combinedHistory);
+
       } catch (err) {
         console.error("Gagal memuat dashboard:", err);
       } finally {
@@ -107,9 +116,7 @@ export default function DashboardPage() {
   return (
     <div className="flex h-screen bg-[#F4F7FE] font-sans text-slate-800 overflow-hidden">
       <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} activeMenu={activeMenu} setActiveMenu={setActiveMenu} userName={userName} isPro={isPro} handleLogout={handleLogout} />
-      
-      <CenterContent activeMenu={activeMenu} setIsSidebarOpen={setIsSidebarOpen} userName={userName} userEmail={userEmail} userWhatsapp={userWhatsapp} koin={koin} riwayatList={riwayatList} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} router={router} />
-      
+      <CenterContent activeMenu={activeMenu} setIsSidebarOpen={setIsSidebarOpen} userName={userName} userEmail={userEmail} userWhatsapp={userWhatsapp} koin={koin} riwayatList={riwayatList} premiumProjects={premiumProjects} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} router={router} />
       <RightPanel activeMenu={activeMenu} koin={koin} isPro={isPro} />
     </div>
   );
