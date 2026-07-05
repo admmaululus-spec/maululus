@@ -1,10 +1,13 @@
 'use client';
 import React from 'react';
-import Link from 'next/link';
 import { BellIcon } from './IconsAndUI';
 import TabDashboard from './TabDashboard';
 import TabProyek from './TabProyek';
-import { TabAiTools, TabDokumen, TabJurnal, TabPengaturan, TabExpert } from './OtherTabs';
+import TabAiTools from './TabAiTools';
+import TabDokumen from './TabDokumen';
+import TabJurnal from './TabJurnal';
+import TabPengaturan from './TabPengaturan';
+import TabExpert from './TabExpert';
 import { TabKoin, TabTopup } from './BillingTabs';
 
 export default function CenterContent({ activeMenu, setActiveMenu, setIsSidebarOpen, userName, userEmail, userWhatsapp, koin, riwayatList, premiumProjects, handleBukaKunci, isProcessing, router }: any) {
@@ -28,10 +31,11 @@ export default function CenterContent({ activeMenu, setActiveMenu, setIsSidebarO
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/upgrade" className="hidden md:flex items-center gap-2 bg-amber-50 border border-amber-100 px-4 py-2 rounded-full cursor-pointer hover:bg-amber-100 transition-colors">
+          {/* UX Fix: Tombol Koin sekarang memicu Tab Topup instan tanpa reload halaman */}
+          <button onClick={() => setActiveMenu('topup')} className="hidden md:flex items-center gap-2 bg-amber-50 border border-amber-100 px-4 py-2 rounded-full cursor-pointer hover:bg-amber-100 transition-colors">
             <span className="text-amber-500 text-lg">🪙</span>
             <span className="text-sm font-bold text-slate-800">{koin} Koin</span>
-          </Link>
+          </button>
           <button className="relative text-slate-400 hover:text-slate-600">
             <BellIcon />
             <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 border-2 border-white rounded-full"></span>

@@ -3,7 +3,6 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
-import Link from 'next/link';
 
 type SubBab = { judul: string; deskripsi: string; url_asli?: string };
 type OutlineData = { bab: string; subBab: SubBab[] };
@@ -91,32 +90,18 @@ function OutlineContent() {
     router.push('/auth');
   };
 
-  // FUNGSI BARU: Trigger Konsultasi Analis
+  // FUNGSI BARU: Langsung arahkan ke Tab Expert Assistance di Dashboard
   const mulaiKonsultasi = async () => {
+    // Simpan instruksi buka tab expert di local storage
+    localStorage.setItem('maululus_active_menu', 'expert'); 
+    
     if (!isLoggedIn) {
-      alert("Silakan login terlebih dahulu untuk mulai konsultasi.");
+      alert("Silakan login terlebih dahulu untuk mengakses layanan Expert.");
       router.push('/auth');
       return;
     }
     
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { data, error } = await supabase
-          .from('consultations')
-          .insert([{ user_id: session.user.id, topic: `Reviu Outline: ${judul}` }])
-          .select()
-          .single();
-
-        if (!error && data) {
-          router.push(`/konsultasi/${data.id}`);
-        } else {
-          console.error("Error create consultation:", error);
-        }
-      }
-    } catch (error) {
-      console.error("Gagal memulai konsultasi:", error);
-    }
+    router.push('/dashboard');
   };
 
   return (
@@ -154,30 +139,6 @@ function OutlineContent() {
                       <div key={sIdx} className="space-y-2">
                         <h4 className="font-bold text-brand-navy text-lg">{sub.judul}</h4>
                         <p className="text-slate-600 leading-relaxed text-sm mb-2">{sub.deskripsi}</p>
-                        
-                        {sub.url_asli ? (
-                          <a 
-                            href={sub.url_asli} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-brand-emerald hover:text-green-800 bg-brand-emerald/10 hover:bg-brand-emerald/20 border border-brand-emerald/30 px-3 py-1.5 rounded-lg transition-all w-fit"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>
-                            Buka Jurnal Asli
-                          </a>
-                        ) : (
-                          <a 
-                            href={`https://scholar.google.com/scholar?q=${encodeURIComponent(judul + ' ' + sub.judul)}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-brand-navy hover:text-blue-900 bg-brand-navy/5 hover:bg-brand-navy/10 border border-brand-navy/20 px-3 py-1.5 rounded-lg transition-all w-fit"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                            </svg>
-                            Cari Referensi di Google Scholar
-                          </a>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -202,14 +163,14 @@ function OutlineContent() {
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                 </button>
 
-                {/* AREA KONSULTASI ANALIS */}
+                {/* AREA MENUJU EXPERT ASSISTANCE */}
                 <div className="border-t border-slate-700 pt-6">
-                  <p className="text-slate-400 text-sm mb-3">Ragu dengan hasil AI ini?</p>
+                  <p className="text-slate-400 text-sm mb-3">Butuh bantuan menyusun ini?</p>
                   <button 
                     onClick={mulaiKonsultasi}
-                    className="w-full rounded-xl bg-slate-800 border-2 border-slate-600 px-4 py-3 font-bold text-slate-200 hover:bg-slate-700 hover:text-white transition-colors flex justify-center items-center gap-2 active:scale-95"
+                    className="w-full rounded-xl bg-[#0B1525] border border-blue-900 px-4 py-3 font-bold text-amber-400 hover:bg-slate-800 hover:text-amber-300 transition-colors flex justify-center items-center gap-2 active:scale-95 shadow-lg"
                   >
-                    Konsultasi dengan Analis
+                    🎓 Gunakan Expert Assistance
                   </button>
                 </div>
 
