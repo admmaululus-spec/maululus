@@ -13,7 +13,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Teks tidak boleh kosong' }, { status: 400 });
     }
 
-    // Menggunakan 1.5 Flash untuk respons secepat kilat dan stabil
     const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
 
     let promptText = '';

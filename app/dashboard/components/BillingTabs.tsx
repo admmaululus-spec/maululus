@@ -34,7 +34,7 @@ export function TabKoin({ koin, riwayatList, setActiveMenu }: any) {
           </div>
         </div>
 
-        {/* Tabel Riwayat */}
+        {/* Tabel Riwayat AI */}
         <div className="md:col-span-2 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-bold text-slate-800 flex items-center gap-2"><ReceiptIcon /> Riwayat Pemakaian AI Tools</h3>
@@ -129,6 +129,18 @@ export function TabTopup({ koin }: any) {
           const currentKoin = currentUser ? currentUser.koin : 0;
           
           await supabase.from('users_data').update({ koin: currentKoin + pkg.koin }).eq('id', session.user.id);
+          
+          // --- CATAT KE TABEL TRANSACTIONS ---
+          await supabase.from('transactions').insert({
+            user_id: session.user.id,
+            user_email: session.user.email,
+            paket_nama: pkg.nama,
+            koin_jumlah: pkg.koin,
+            harga_rp: pkg.harga,
+            metode: 'Midtrans Gateway',
+            status: 'SUCCESS'
+          });
+          // ------------------------------------
           
           alert(`Berhasil! ${pkg.koin} Koin telah ditambahkan ke akun Anda.`);
           window.location.reload();

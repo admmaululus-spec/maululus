@@ -10,7 +10,6 @@ export default function PengaturanHargaPage() {
   const [expertPkgs, setExpertPkgs] = useState<any[]>([]);
   const [aiTools, setAiTools] = useState<any[]>([]);
 
-  // State untuk Modal Edit Paket
   const [editModal, setEditModal] = useState<{ show: boolean, type: 'coin' | 'expert', data: any }>({ show: false, type: 'coin', data: null });
 
   const fetchData = async () => {
@@ -35,33 +34,29 @@ export default function PengaturanHargaPage() {
 
   const formatRp = (angka: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(angka);
 
-  // 1. Fungsi Update Kurs Koin
   const handleUpdateKurs = async () => {
-    const val = prompt("Masukkan harga rupiah untuk 1 Koin:", koinRate.toString());
+    const val = prompt("Masukkan harga rupiah untuk 1 Koin (Contoh: 500):", koinRate.toString());
     if (val && !isNaN(Number(val))) {
       await supabase.from('app_settings').update({ value: val }).eq('key', 'koin_rate');
       setKoinRate(Number(val));
-      alert("Kurs Koin berhasil diupdate!");
+      alert("Kurs Koin berhasil diperbarui!");
     }
   };
 
-  // 2. Fungsi Update Tarif AI Tools (Cepat via Prompt)
   const handleUpdateAiTarif = async (id: string, currentKoin: number, nama: string) => {
-    const val = prompt(`Masukkan jumlah potongan koin baru untuk fitur ${nama}:`, currentKoin.toString());
+    const val = prompt(`Masukkan jumlah potongan koin baru untuk alat ${nama}:`, currentKoin.toString());
     if (val && !isNaN(Number(val))) {
       await supabase.from('ai_tools_pricing').update({ koin: Number(val) }).eq('id', id);
       fetchData();
     }
   };
 
-  // 3. Fungsi Set "Paling Populer" (Best Seller) Top Up Koin
   const handleSetBestSeller = async (id: string) => {
-    await supabase.from('coin_packages').update({ is_best_seller: false }).neq('id', '00000000-0000-0000-0000-000000000000'); // Reset semua
-    await supabase.from('coin_packages').update({ is_best_seller: true }).eq('id', id); // Set yg dipilih
+    await supabase.from('coin_packages').update({ is_best_seller: false }).neq('id', '00000000-0000-0000-0000-000000000000'); 
+    await supabase.from('coin_packages').update({ is_best_seller: true }).eq('id', id); 
     fetchData();
   };
 
-  // 4. Fungsi Simpan Modal Edit Paket (Koin & Expert)
   const handleSavePackage = async () => {
     try {
       const { id, nama, deskripsi, harga } = editModal.data;
@@ -73,19 +68,19 @@ export default function PengaturanHargaPage() {
       }
       setEditModal({ show: false, type: 'coin', data: null });
       fetchData();
-      alert("Data paket berhasil diperbarui!");
+      alert("Data berhasil disimpan!");
     } catch (err: any) {
       alert("Gagal menyimpan: " + err.message);
     }
   };
 
-  if (loading) return <div className="p-10 text-center font-bold text-blue-600 animate-pulse">Memuat Pengaturan...</div>;
+  if (loading) return <div className="p-10 text-center font-bold text-blue-600 animate-pulse">Memuat Pengaturan Web...</div>;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto font-sans">
+    <div className="max-w-7xl mx-auto font-sans">
       <div className="mb-8 flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Pengaturan Harga & Layanan</h1>
+          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Pengaturan Harga Web</h1>
           <p className="text-slate-500 mt-1">Atur harga produk, tarif koin, dan pengaturan diskon secara terpusat.</p>
         </div>
         <div className="bg-white px-6 py-3 rounded-2xl border border-slate-200 shadow-sm text-center">
@@ -93,16 +88,13 @@ export default function PengaturanHargaPage() {
           <div className="flex items-center gap-2">
             <span className="text-xl">🪙</span>
             <span className="text-xl font-black text-slate-800">1 = {formatRp(koinRate)}</span>
-            <button onClick={handleUpdateKurs} className="ml-3 text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded font-bold hover:bg-blue-100">Ubah Kurs</button>
+            <button onClick={handleUpdateKurs} className="ml-3 text-[10px] bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-100">Ubah Kurs</button>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* BAGIAN KIRI: Koin & AI Tools */}
         <div className="space-y-8">
-          
-          {/* Tabel AI Tools */}
           <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-5 border-b border-slate-100 bg-slate-50 flex items-center gap-3">
               <span className="text-xl">🤖</span>
@@ -127,7 +119,6 @@ export default function PengaturanHargaPage() {
             </table>
           </div>
 
-          {/* Tabel Paket Koin */}
           <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-5 border-b border-slate-100 bg-slate-50 flex items-center gap-3">
               <span className="text-xl">💳</span>
@@ -148,8 +139,8 @@ export default function PengaturanHargaPage() {
                       <span className="text-xs font-bold text-slate-700">{formatRp(pkg.harga)}</span>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <button onClick={() => setEditModal({ show: true, type: 'coin', data: pkg })} className="text-[10px] bg-white border border-slate-200 px-3 py-1.5 rounded-lg font-bold hover:bg-slate-50">Edit</button>
+                  <div className="flex flex-col gap-2 items-end">
+                    <button onClick={() => setEditModal({ show: true, type: 'coin', data: pkg })} className="text-[10px] bg-white border border-slate-200 px-3 py-1.5 rounded-lg font-bold hover:bg-slate-50">Edit Paket</button>
                     {!pkg.is_best_seller && (
                       <button onClick={() => handleSetBestSeller(pkg.id)} className="text-[10px] text-amber-600 font-bold hover:underline">Set Terlaris</button>
                     )}
@@ -158,10 +149,8 @@ export default function PengaturanHargaPage() {
               ))}
             </div>
           </div>
-
         </div>
 
-        {/* BAGIAN KANAN: Expert Assistance */}
         <div className="space-y-8">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-5 border-b border-slate-100 bg-slate-50 flex items-center gap-3">
@@ -191,7 +180,6 @@ export default function PengaturanHargaPage() {
         </div>
       </div>
 
-      {/* MODAL EDIT DATA (Berlaku untuk Coin & Expert) */}
       {editModal.show && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl relative">
@@ -227,7 +215,6 @@ export default function PengaturanHargaPage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

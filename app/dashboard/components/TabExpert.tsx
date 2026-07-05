@@ -66,6 +66,18 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
             await supabase.from('users_data').update({ koin: koin - koinTerpotong }).eq('id', session.user.id);
           }
 
+          // --- CATAT KE TABEL TRANSACTIONS ---
+          await supabase.from('transactions').insert({
+            user_id: session.user.id,
+            user_email: session.user.email,
+            paket_nama: selectedPaket.nama,
+            koin_jumlah: useKoin ? -(koinTerpotong) : 0, // Catat koin yang terpotong jika ada
+            harga_rp: finalPrice,
+            metode: 'Midtrans Gateway',
+            status: 'SUCCESS'
+          });
+          // ------------------------------------
+
           // Masukkan ke Database Proyek sebagai "Aktif"
           await supabase.from('premium_projects').insert({
             id: orderId,
