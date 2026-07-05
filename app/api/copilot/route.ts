@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     }
 
     // Menggunakan 1.5 Flash untuk respons secepat kilat dan stabil
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
 
     let promptText = '';
     const konteks = `Judul Skripsi: "${judulSkripsi}". Sedang menulis bagian: "${namaBab}".\n\n`;

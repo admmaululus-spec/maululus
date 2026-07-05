@@ -55,7 +55,8 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen, activeMenu, s
         <div className="bg-[#152336] rounded-2xl p-4 relative overflow-hidden">
            <h4 className="text-xs font-bold mb-1">Gunakan AI, Hemat Waktu</h4>
            <p className="text-[10px] text-slate-400 mb-3 w-2/3">Dapatkan draft berkualitas dalam hitungan detik dengan AI Maululus.</p>
-           <button className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors">Coba AI Sekarang</button>
+           {/* Perbaikan pada onClick tombol di bawah ini */}
+           <button onClick={() => setActiveMenu('ai-tools')} className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors">Coba AI Sekarang</button>
            <div className="absolute -bottom-2 -right-2 opacity-50">🤖</div>
         </div>
         <div className="flex items-center gap-3">

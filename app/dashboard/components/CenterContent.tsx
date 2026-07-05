@@ -46,7 +46,7 @@ export default function CenterContent({ activeMenu, setActiveMenu, setIsSidebarO
       <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#F8FAFC]">
         {activeMenu === 'dashboard' && <TabDashboard riwayatList={riwayatList} activeProject={activeProject} router={router} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} setActiveMenu={setActiveMenu} />}
         {activeMenu === 'proyek' && <TabProyek activeProject={activeProject} />}
-        {activeMenu === 'expert' && <TabExpert />}
+        {activeMenu === 'expert' && <TabExpert riwayatList={riwayatList} />}
         {activeMenu === 'ai-tools' && <TabAiTools koin={koin} />}
         {activeMenu === 'dokumen' && <TabDokumen dokumenList={dokumenList} router={router} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} />}
         {activeMenu === 'jurnal' && <TabJurnal jurnalRefList={jurnalRefList} router={router} setActiveMenu={setActiveMenu} />}

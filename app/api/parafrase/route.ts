@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     }
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-3.1-flash-lite',
+      model: 'gemini-3.5-flash',
       generationConfig: {
         temperature: 0.4, // Cukup rendah agar tetap baku dan tidak terlalu kreatif/melenceng
       }

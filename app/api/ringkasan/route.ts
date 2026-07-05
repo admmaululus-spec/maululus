@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     }
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-3.1-flash-lite', // Sangat efisien untuk meringkas teks
+      model: 'gemini-3.5-flash', // Sangat efisien untuk meringkas teks
       generationConfig: {
         temperature: 0.3, // Rendah agar tidak melenceng dari konteks asli
       }

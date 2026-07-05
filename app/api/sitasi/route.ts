@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     }
 
     // Gunakan model Flash karena sangat cepat untuk pemrosesan teks
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
 
     const prompt = `
       Kamu adalah asisten akademik ahli. Pengguna memberikan data mentah, judul, atau kutipan jurnal berikut:
