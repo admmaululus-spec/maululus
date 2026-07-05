@@ -4,45 +4,57 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import Link from 'next/link';
+import { ConfirmModal } from '../components/IconsAndUI';
 
 export default function RingkasanJurnalPage() {
   const router = useRouter();
-  const HARGA_KOIN = 3;
 
+  const [hargaKoin, setHargaKoin] = useState<number | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [koin, setKoin] = useState(0);
+  
   const [textInput, setTextInput] = useState('');
   const [textOutput, setTextOutput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const initializePage = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return router.push('/auth');
       setUserId(session.user.id);
 
-      const { data } = await supabase.from('users_data').select('koin').eq('id', session.user.id).single();
-      if (data) setKoin(data.koin);
+      const { data: userData } = await supabase.from('users_data').select('koin').eq('id', session.user.id).single();
+      if (userData) setKoin(userData.koin);
+
+      const { data: priceData } = await supabase.from('ai_tools_pricing').select('koin').eq('id', 'ringkasan-jurnal').single();
+      setHargaKoin(priceData ? priceData.koin : 3);
     };
-    fetchUser();
+    initializePage();
   }, [router]);
 
-  const handleRingkasan = async () => {
+  const handleRingkasanClick = () => {
     if (!textInput.trim()) return alert("Teks tidak boleh kosong!");
-    if (koin < HARGA_KOIN) {
-      alert(`Koin tidak cukup! Kamu butuh ${HARGA_KOIN} Koin.`);
-      return router.push('/dashboard/upgrade');
+    if (hargaKoin === null) return;
+    setModalOpen(true);
+  };
+
+  const confirmRingkasan = async () => {
+    if (hargaKoin === null) return;
+    if (koin < hargaKoin) {
+      alert(`Koin tidak cukup! Kamu butuh ${hargaKoin} Koin.`);
+      setModalOpen(false);
+      return router.push('/dashboard?menu=topup');
     }
 
+    setModalOpen(false);
     setIsProcessing(true);
 
     try {
-      // 1. Potong koin
-      const { error } = await supabase.from('users_data').update({ koin: koin - HARGA_KOIN }).eq('id', userId);
+      const { error } = await supabase.from('users_data').update({ koin: koin - hargaKoin }).eq('id', userId);
       if (error) throw error;
-      setKoin(prev => prev - HARGA_KOIN);
+      setKoin(prev => prev - hargaKoin);
 
-      // 2. Panggil API Ringkasan
       const res = await fetch('/api/ringkasan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -55,7 +67,6 @@ export default function RingkasanJurnalPage() {
       
       setTextOutput(hasilRingkasan);
 
-      // 3. Simpan ke History Supabase
       if (userId) {
         await supabase.from('ai_tools_history').insert({
           user_id: userId,
@@ -67,7 +78,6 @@ export default function RingkasanJurnalPage() {
 
     } catch (err) {
       alert("Gagal memproses ringkasan. Koin dikembalikan.");
-      // Rollback koin otomatis
       if (userId) {
         await supabase.from('users_data').update({ koin: koin }).eq('id', userId);
         setKoin(koin);
@@ -76,6 +86,8 @@ export default function RingkasanJurnalPage() {
       setIsProcessing(false);
     }
   };
+
+  if (hargaKoin === null) return <div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div></div>;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
@@ -98,39 +110,31 @@ export default function RingkasanJurnalPage() {
           </div>
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">AI Ringkasan Jurnal</h1>
-            <p className="text-slate-500 mt-2 text-sm max-w-xl">Pahami inti dari jurnal yang panjang dalam hitungan detik. Ekstrak Tujuan, Metode, dan Kesimpulan dengan cepat.</p>
+            <p className="text-slate-500 mt-2 text-sm max-w-xl">Pahami inti dari jurnal yang panjang dalam hitungan detik.</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Kolom Input */}
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-sm text-slate-700">Teks Asli / Abstrak Jurnal</h3>
-            </div>
+            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-sm text-slate-700">Teks Asli / Abstrak Jurnal</h3></div>
             <textarea
-              value={textInput}
-              onChange={(e) => setTextInput(e.target.value)}
-              placeholder="Tempelkan abstrak atau isi teks jurnal panjang di sini..."
+              value={textInput} onChange={(e) => setTextInput(e.target.value)}
+              placeholder="Tempelkan abstrak atau isi teks jurnal di sini..."
               className="flex-1 min-h-[300px] w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm resize-none outline-none focus:border-blue-500 transition-all"
             ></textarea>
             <button 
-              onClick={handleRingkasan}
-              disabled={isProcessing || !textInput}
+              onClick={handleRingkasanClick} disabled={isProcessing || !textInput}
               className="w-full mt-4 bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50"
             >
-              {isProcessing ? 'AI Sedang Membaca...' : `Buat Ringkasan (-${HARGA_KOIN} Koin)`}
+              {isProcessing ? 'Membaca...' : `Buat Ringkasan (-${hargaKoin} Koin)`}
             </button>
           </div>
 
-          {/* Kolom Output */}
           <div className="bg-blue-50/50 border border-blue-100 rounded-3xl p-6 shadow-sm flex flex-col relative">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-sm text-blue-900">Hasil Rangkuman Poin</h3>
               {textOutput && (
-                <button onClick={() => navigator.clipboard.writeText(textOutput)} className="text-xs font-bold text-blue-600 bg-white border border-blue-200 px-3 py-1.5 rounded-lg shadow-sm hover:scale-105 transition-transform">
-                  Salin Teks
-                </button>
+                <button onClick={() => navigator.clipboard.writeText(textOutput)} className="text-xs font-bold text-blue-600 bg-white border border-blue-200 px-3 py-1.5 rounded-lg shadow-sm hover:scale-105 transition-transform">Salin Teks</button>
               )}
             </div>
             
@@ -141,8 +145,7 @@ export default function RingkasanJurnalPage() {
                </div>
             ) : (
               <textarea
-                value={textOutput}
-                readOnly
+                value={textOutput} readOnly
                 placeholder="Hasil poin-poin ringkasan akan muncul di sini..."
                 className="flex-1 min-h-[300px] w-full bg-white/70 border border-blue-100/50 rounded-2xl p-5 text-sm resize-none outline-none text-slate-800 leading-relaxed"
               ></textarea>
@@ -150,6 +153,14 @@ export default function RingkasanJurnalPage() {
           </div>
         </div>
       </main>
+
+      <ConfirmModal 
+        isOpen={modalOpen} 
+        title="Ringkas Jurnal" 
+        desc={`Fitur ini akan memotong ${hargaKoin} koin dari saldo Anda. Ekstrak data jurnal sekarang?`}
+        onConfirm={confirmRingkasan} 
+        onCancel={() => setModalOpen(false)} 
+      />
     </div>
   );
 }

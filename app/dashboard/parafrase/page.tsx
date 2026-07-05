@@ -7,8 +7,9 @@ import Link from 'next/link';
 
 export default function ParafrasePage() {
   const router = useRouter();
-  const HARGA_KOIN = 15;
-
+  
+  // State Dinamis
+  const [hargaKoin, setHargaKoin] = useState<number | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [koin, setKoin] = useState(0);
   const [textInput, setTextInput] = useState('');
@@ -16,36 +17,45 @@ export default function ParafrasePage() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const initializePage = async () => {
+      // 1. Cek User & Saldo Koin
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return router.push('/auth');
       setUserId(session.user.id);
 
-      const { data } = await supabase.from('users_data').select('koin').eq('id', session.user.id).single();
-      if (data) setKoin(data.koin);
+      const { data: userData } = await supabase.from('users_data').select('koin').eq('id', session.user.id).single();
+      if (userData) setKoin(userData.koin);
+
+      // 2. Ambil Harga Dinamis Khusus Parafrase dari DB Admin
+      const { data: pricingData } = await supabase.from('ai_tools_pricing').select('koin').eq('id', 'parafrase').single();
+      if (pricingData) {
+        setHargaKoin(pricingData.koin);
+      } else {
+        setHargaKoin(15); // Fallback harga default jika db error
+      }
     };
-    fetchUser();
+    initializePage();
   }, [router]);
 
   const handleParafrase = async () => {
+    if (hargaKoin === null) return;
     if (!textInput.trim()) return alert("Teks tidak boleh kosong!");
-    if (koin < HARGA_KOIN) {
-      alert(`Koin tidak cukup! Kamu butuh ${HARGA_KOIN} Koin.`);
-      return router.push('/dashboard/upgrade');
+    if (koin < hargaKoin) {
+      alert(`Koin tidak cukup! Kamu butuh ${hargaKoin} Koin.`);
+      return router.push('/dashboard?menu=topup');
     }
 
     setIsProcessing(true);
 
     try {
-      // 1. Potong koin
-      const { error } = await supabase.from('users_data').update({ koin: koin - HARGA_KOIN }).eq('id', userId);
+      // 1. Potong koin sesuai harga DB
+      const { error } = await supabase.from('users_data').update({ koin: koin - hargaKoin }).eq('id', userId);
       if (error) throw error;
-      setKoin(prev => prev - HARGA_KOIN);
+      setKoin(prev => prev - hargaKoin);
 
-      // 2. Panggil API Parafrase (Nanti ganti dengan fetch ke /api/parafrase)
-      // Simulasi proses AI:
+      // 2. Panggil API Parafrase (Simulasi AI)
       await new Promise(resolve => setTimeout(resolve, 3000));
-      const hasilParafrase = `(Ini adalah hasil parafrase AI) ${textInput.split(' ').reverse().join(' ')}`;
+      const hasilParafrase = `(Hasil Parafrase AI) ${textInput.split(' ').reverse().join(' ')}`;
       
       setTextOutput(hasilParafrase);
 
@@ -54,14 +64,13 @@ export default function ParafrasePage() {
         await supabase.from('ai_tools_history').insert({
           user_id: userId,
           tool_name: 'Parafrase',
-          input_data: textInput.substring(0, 100) + '...', // Simpan sedikit cuplikan awalnya saja
-          result_data: { teks_hasil: hasilParafrase } // Simpan dalam format JSON
+          input_data: textInput.substring(0, 100) + '...',
+          result_data: { teks_hasil: hasilParafrase }
         });
       }
 
     } catch (err) {
       alert("Gagal memproses parafrase. Koin dikembalikan.");
-      // Rollback koin otomatis
       if (userId) {
         await supabase.from('users_data').update({ koin: koin }).eq('id', userId);
         setKoin(koin);
@@ -70,6 +79,8 @@ export default function ParafrasePage() {
       setIsProcessing(false);
     }
   };
+
+  if (hargaKoin === null) return <div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
@@ -93,7 +104,6 @@ export default function ParafrasePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Kolom Input */}
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-sm text-slate-700">Teks Asli</h3>
@@ -110,11 +120,10 @@ export default function ParafrasePage() {
               disabled={isProcessing || !textInput}
               className="w-full mt-4 bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-50"
             >
-              {isProcessing ? 'AI Sedang Menulis...' : `Parafrase Teks (-${HARGA_KOIN} Koin)`}
+              {isProcessing ? 'AI Sedang Menulis...' : `Parafrase Teks (-${hargaKoin} Koin)`}
             </button>
           </div>
 
-          {/* Kolom Output */}
           <div className="bg-indigo-50 border border-indigo-100 rounded-3xl p-6 shadow-sm flex flex-col relative">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-sm text-indigo-900">Hasil Parafrase</h3>

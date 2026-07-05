@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 // Konfigurasi Font Poppins
@@ -83,6 +84,14 @@ export default function RootLayout({
       </head>
       <body className={`${poppins.variable} font-sans antialiased text-slate-900 bg-slate-50`}>
         {children}
+
+        {/* 4. SCRIPT SNAP MIDTRANS (Menggunakan Environment Variables) */}
+        {/* Pastikan kamu sudah menambahkan NEXT_PUBLIC_MIDTRANS_CLIENT_KEY di file .env.local */}
+        <Script 
+          src="https://app.sandbox.midtrans.com/snap/snap.js" 
+          data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY} 
+          strategy="beforeInteractive"
+        />
       </body>
     </html>
   );

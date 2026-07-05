@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import Link from 'next/link';
+import { ConfirmModal } from '../components/IconsAndUI';
 
-// === KOMPONEN TOOLTIP ACTION ===
 const ActionTooltip = ({ text, children }: { text: string; children: React.ReactNode }) => (
   <div className="group relative flex-1">
     {children}
@@ -16,42 +17,67 @@ const ActionTooltip = ({ text, children }: { text: string; children: React.React
 );
 
 export default function CopilotPage() {
-  const [isPro, setIsPro] = useState<boolean | null>(null);
-  const [isLoadingCheck, setIsLoadingCheck] = useState(true);
+  const router = useRouter();
   
-  // State Input
+  const [hargaKoin, setHargaKoin] = useState<number | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [koin, setKoin] = useState(0);
+  
   const [judulSkripsi, setJudulSkripsi] = useState('');
   const [namaBab, setNamaBab] = useState('');
   const [inputText, setInputText] = useState('');
-  
-  // State Output
   const [outputText, setOutputText] = useState('');
   const [isLoadingAI, setIsLoadingAI] = useState(false);
 
-  useEffect(() => {
-    const checkProStatus = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const { data } = await supabase.from('users_data').select('is_pro').eq('id', session.user.id).single();
-      setIsPro(data?.is_pro || false);
-      setIsLoadingCheck(false);
-    };
-    checkProStatus();
-  }, []);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'paraphrase' | 'expand' | 'formalize' | null>(null);
 
-  const handleProcess = async (action: 'paraphrase' | 'expand' | 'formalize') => {
+  useEffect(() => {
+    const initializePage = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return router.push('/auth');
+      setUserId(session.user.id);
+
+      const { data: userData } = await supabase.from('users_data').select('koin').eq('id', session.user.id).single();
+      if (userData) setKoin(userData.koin);
+
+      const { data: priceData } = await supabase.from('ai_tools_pricing').select('koin').eq('id', 'copilot').single();
+      setHargaKoin(priceData ? priceData.koin : 15);
+    };
+    initializePage();
+  }, [router]);
+
+  const handleProcessClick = (action: 'paraphrase' | 'expand' | 'formalize') => {
     if (!inputText.trim()) return alert('Input teks kosong!');
+    if (hargaKoin === null) return;
+    
+    setPendingAction(action);
+    setModalOpen(true);
+  };
+
+  const confirmProcess = async () => {
+    if (!pendingAction || hargaKoin === null) return;
+    if (koin < hargaKoin) {
+      alert(`Koin tidak cukup! Butuh ${hargaKoin} Koin.`);
+      setModalOpen(false);
+      return router.push('/dashboard?menu=topup');
+    }
+
+    setModalOpen(false);
     setIsLoadingAI(true);
     
     try {
+      const { error } = await supabase.from('users_data').update({ koin: koin - hargaKoin }).eq('id', userId);
+      if (error) throw error;
+      setKoin(prev => prev - hargaKoin);
+
       const response = await fetch('/api/copilot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           text: inputText, 
-          action: action,
-          // Mengirimkan konteks ke API agar AI tahu arah skripsinya
-          judulSkripsi: judulSkripsi.trim() || 'Tidak disebutkan spesifik',
+          action: pendingAction,
+          judulSkripsi: judulSkripsi.trim() || 'Tidak disebutkan',
           namaBab: namaBab.trim() || 'Bagian acak'
         }),
       });
@@ -60,59 +86,40 @@ export default function CopilotPage() {
       if (data.error) throw new Error(data.error);
       setOutputText(data.result);
       
+      await supabase.from('ai_tools_history').insert({
+        user_id: userId,
+        tool_name: 'AI Draft Writer',
+        input_data: inputText.substring(0, 100) + '...',
+        result_data: { teks_hasil: data.result }
+      });
+
     } catch (e: any) {
       alert(`Gagal memproses AI: ${e.message}`);
+      await supabase.from('users_data').update({ koin: koin }).eq('id', userId);
     } finally {
       setIsLoadingAI(false);
     }
   };
 
-  if (isLoadingCheck) return <div className="min-h-screen bg-white flex items-center justify-center"><div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-slate-900"></div></div>;
+  if (hargaKoin === null) return <div className="min-h-screen bg-white flex items-center justify-center"><div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600"></div></div>;
 
-  // TAMPILAN PAYWALL MODERN
-  if (!isPro) {
-    return (
-      <div className="min-h-screen bg-slate-50 font-sans flex items-center justify-center p-6">
-        <div className="max-w-sm w-full bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-sm">
-          <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-4">Akses Ditolak</p>
-          <h1 className="text-xl font-bold text-slate-900 mb-2">Fitur Khusus Pro</h1>
-          <p className="text-slate-400 text-xs leading-relaxed mb-8">AI Copilot hanya tersedia untuk pengguna paket Pro Scholar. Akses fitur penulisan tingkat lanjut sekarang.</p>
-          <Link href="/dashboard/upgrade" className="block w-full bg-slate-900 text-white font-bold py-3 text-xs rounded-xl hover:bg-slate-800 transition-all mb-3">Tingkatkan Paket</Link>
-          <Link href="/dashboard" className="text-[10px] font-bold text-slate-400 uppercase hover:text-slate-600 transition-colors">Kembali</Link>
-        </div>
-      </div>
-    );
-  }
-
-  // TAMPILAN TOOL AI MODERN & MINIMALIS
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      <header className="bg-white border-b border-slate-200 h-16 flex items-center px-6">
-        <Link href="/dashboard" className="text-xs font-bold text-slate-400 hover:text-slate-900 transition-colors tracking-tighter uppercase">← Kembali ke Dashboard</Link>
+      <header className="bg-white border-b border-slate-200 h-16 flex items-center px-6 justify-between">
+        <Link href="/dashboard" className="text-xs font-bold text-slate-400 hover:text-blue-600 transition-colors tracking-tighter uppercase">← Kembali ke Dashboard</Link>
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-full">
+          <span className="text-amber-500">🪙</span>
+          <span className="text-sm font-bold text-slate-800">{koin} Koin</span>
+        </div>
       </header>
 
       <main className="max-w-7xl mx-auto p-6 lg:p-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[75vh]">
           
-          {/* EDITOR SECTION */}
           <div className="flex flex-col gap-4">
-            
-            {/* --- INPUT KONTEKS SKRIPSI --- */}
             <div className="flex gap-3 animate-in fade-in slide-in-from-top-2">
-              <input 
-                type="text" 
-                placeholder="Judul Skripsi (Opsional: untuk konteks AI)" 
-                value={judulSkripsi}
-                onChange={(e) => setJudulSkripsi(e.target.value)}
-                className="flex-[2] bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-700 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all"
-              />
-              <input 
-                type="text" 
-                placeholder="Bab/Bagian" 
-                value={namaBab}
-                onChange={(e) => setNamaBab(e.target.value)}
-                className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-700 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all"
-              />
+              <input type="text" placeholder="Judul Skripsi (Opsional: untuk konteks AI)" value={judulSkripsi} onChange={(e) => setJudulSkripsi(e.target.value)} className="flex-[2] bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-700 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" />
+              <input type="text" placeholder="Bab/Bagian" value={namaBab} onChange={(e) => setNamaBab(e.target.value)} className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-700 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" />
             </div>
 
             <div className="flex justify-between items-center h-4 mt-2">
@@ -121,7 +128,7 @@ export default function CopilotPage() {
             </div>
             
             <textarea 
-              className="flex-1 w-full bg-white border border-slate-200 rounded-2xl p-6 text-sm text-slate-700 outline-none resize-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all leading-relaxed shadow-sm custom-scrollbar"
+              className="flex-1 w-full bg-white border border-slate-200 rounded-2xl p-6 text-sm text-slate-700 outline-none resize-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all leading-relaxed shadow-sm custom-scrollbar"
               placeholder="Masukkan draf paragraf, poin materi, atau teks kutipan di sini..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
@@ -129,18 +136,17 @@ export default function CopilotPage() {
             
             <div className="flex gap-2">
               <ActionTooltip text="Rombak susunan kalimat agar unik dan aman dari uji Turnitin.">
-                <button onClick={() => handleProcess('paraphrase')} disabled={isLoadingAI} className="w-full bg-white border border-slate-200 text-slate-900 py-3.5 rounded-xl text-[10px] font-bold uppercase tracking-wide hover:bg-slate-50 transition-all disabled:opacity-50">Parafrase</button>
+                <button onClick={() => handleProcessClick('paraphrase')} disabled={isLoadingAI} className="w-full bg-white border border-slate-200 text-slate-900 py-3.5 rounded-xl text-[10px] font-bold uppercase tracking-wide hover:bg-slate-50 transition-all disabled:opacity-50">Parafrase</button>
               </ActionTooltip>
               <ActionTooltip text="Ubah kalimat pendek menjadi 1-2 paragraf akademik berbobot.">
-                <button onClick={() => handleProcess('expand')} disabled={isLoadingAI} className="w-full bg-white border border-slate-200 text-slate-900 py-3.5 rounded-xl text-[10px] font-bold uppercase tracking-wide hover:bg-slate-50 transition-all disabled:opacity-50">Kembangkan</button>
+                <button onClick={() => handleProcessClick('expand')} disabled={isLoadingAI} className="w-full bg-white border border-slate-200 text-slate-900 py-3.5 rounded-xl text-[10px] font-bold uppercase tracking-wide hover:bg-slate-50 transition-all disabled:opacity-50">Kembangkan</button>
               </ActionTooltip>
-              <ActionTooltip text="Koreksi struktur EYD/PUEBI menjadi bahasa skripsi yang sangat baku.">
-                <button onClick={() => handleProcess('formalize')} disabled={isLoadingAI} className="w-full bg-white border border-slate-200 text-slate-900 py-3.5 rounded-xl text-[10px] font-bold uppercase tracking-wide hover:bg-slate-50 transition-all disabled:opacity-50">Formalize</button>
+              <ActionTooltip text="Koreksi struktur EYD/PUEBI menjadi bahasa skripsi baku.">
+                <button onClick={() => handleProcessClick('formalize')} disabled={isLoadingAI} className="w-full bg-white border border-slate-200 text-slate-900 py-3.5 rounded-xl text-[10px] font-bold uppercase tracking-wide hover:bg-slate-50 transition-all disabled:opacity-50">Formalize</button>
               </ActionTooltip>
             </div>
           </div>
           
-          {/* RESULT SECTION */}
           <div className="flex flex-col gap-4">
             <div className="flex justify-between items-center h-4 mt-12 sm:mt-0">
               <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Keluaran AI</h2>
@@ -163,6 +169,14 @@ export default function CopilotPage() {
 
         </div>
       </main>
+
+      <ConfirmModal 
+        isOpen={modalOpen} 
+        title="Konfirmasi Penggunaan Koin" 
+        desc={`Tindakan ini akan menggunakan ${hargaKoin} koin. Lanjutkan memproses draf?`}
+        onConfirm={confirmProcess} 
+        onCancel={() => setModalOpen(false)} 
+      />
     </div>
   );
 }

@@ -1,32 +1,80 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/app/lib/supabase';
 import { 
   SparklesIcon, AcademicCapIcon, ToolItem, PackageItem, FeatureIcon, TargetIcon, PencilIcon, RefreshIcon, FolderIcon, DocumentIcon,
-  PresentationIcon, UserTieIcon, ChartLineIcon, ChatBubbleIcon 
+  PresentationIcon, UserTieIcon, ChartLineIcon, ChatBubbleIcon, ConfirmModal 
 } from './IconsAndUI';
 
-export default function TabDashboard({ riwayatList, activeProject, router, handleBukaKunci, isProcessing, setActiveMenu }: any) {
+export default function TabDashboard({ riwayatList, activeProject, router, handleBukaKunci, isProcessing, setActiveMenu, koin }: any) {
+  const [tools, setTools] = useState<any[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedTool, setSelectedTool] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchToolsPreview = async () => {
+      // Ambil harga dan tooltip khusus 3 alat unggulan untuk Dashboard
+      const { data } = await supabase.from('ai_tools_pricing').select('*').in('id', ['generator', 'copilot', 'parafrase']);
+      if (data) setTools(data);
+    };
+    fetchToolsPreview();
+  }, []);
+
+  const getToolData = (id: string) => {
+    return tools.find(t => t.id === id) || { id, nama: '', koin: 0, tooltip: '', is_hot: false };
+  };
+
+  const handleToolClick = (toolId: string) => {
+    const tool = getToolData(toolId);
+    if (tool.koin === 0) {
+      router.push(toolId === 'generator' ? '/generator' : `/dashboard/${toolId}`);
+      return;
+    }
+    setSelectedTool(tool);
+    setModalOpen(true);
+  };
+
+  const confirmDeduction = async () => {
+    if (koin < selectedTool.koin) {
+      alert(`Koin kamu tidak cukup. Butuh ${selectedTool.koin} Koin.`);
+      setModalOpen(false);
+      return;
+    }
+    setModalOpen(false);
+    router.push(`/dashboard/${selectedTool.id}`);
+  };
+
   return (
     <div className="animate-in fade-in space-y-6 max-w-5xl mx-auto">
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         
-        {/* Box AI Tools */}
+        {/* Box AI Tools Preview */}
         <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h3 className="flex items-center gap-2 font-bold text-blue-700 text-sm">
               <SparklesIcon /> AI TOOLS <span className="text-slate-500 text-xs font-normal">(Gunakan Koin)</span>
             </h3>
-            {/* Perbaikan pada tombol ini */}
             <button onClick={() => setActiveMenu('ai-tools')} className="text-xs text-blue-600 font-semibold hover:underline">Lihat Semua Tools →</button>
           </div>
+          
           <div className="grid grid-cols-3 gap-4 mb-4">
-            <ToolItem href="/generator" icon={<TargetIcon />} label="Buat Judul" isFree />
-            <ToolItem href="/dashboard/copilot" icon={<PencilIcon />} label="AI Draft Writer" coin={15} isHot />
-            <ToolItem href="/dashboard/parafrase" icon={<RefreshIcon />} label="Parafrase" coin={15} />
+            <ToolItem 
+              icon={<TargetIcon />} label={getToolData('generator').nama || 'Buat Judul'} coin={getToolData('generator').koin} 
+              isFree={true} tooltip={getToolData('generator').tooltip} onClick={() => handleToolClick('generator')} 
+            />
+            <ToolItem 
+              icon={<PencilIcon />} label={getToolData('copilot').nama || 'AI Draft Writer'} coin={getToolData('copilot').koin} 
+              isHot={getToolData('copilot').is_hot} tooltip={getToolData('copilot').tooltip} onClick={() => handleToolClick('copilot')} 
+            />
+            <ToolItem 
+              icon={<RefreshIcon />} label={getToolData('parafrase').nama || 'Parafrase'} coin={getToolData('parafrase').koin} 
+              tooltip={getToolData('parafrase').tooltip} onClick={() => handleToolClick('parafrase')} 
+            />
           </div>
+          
           <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex gap-3 items-start mt-4">
             <span className="text-blue-500">ℹ️</span>
-            <p className="text-[10px] text-slate-600 leading-relaxed">AI Tools memberikan draft instan. Untuk hasil yang lebih mendalam dan terarah, gunakan layanan Expert Assistance.</p>
+            <p className="text-[10px] text-slate-600 leading-relaxed">Arahkan kursor ke icon tool untuk melihat fungsi spesifiknya. Pastikan saldo koin cukup sebelum menggunakan AI.</p>
           </div>
         </div>
 
@@ -35,7 +83,6 @@ export default function TabDashboard({ riwayatList, activeProject, router, handl
           <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-slate-800 text-sm">Proyek Berjalan</h3>
-              {/* Perbaikan pada tombol ini */}
               <button onClick={() => setActiveMenu('proyek')} className="text-xs text-blue-600 font-semibold hover:underline">Lihat Detail →</button>
             </div>
             <div className="flex gap-4">
@@ -67,9 +114,10 @@ export default function TabDashboard({ riwayatList, activeProject, router, handl
             </div>
           </div>
         ) : (
-          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex flex-col">
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex flex-col cursor-pointer hover:border-emerald-300 transition-all group" onClick={() => setActiveMenu('expert')}>
             <div className="flex justify-between items-center mb-5">
               <h3 className="flex items-center gap-2 font-bold text-emerald-600 text-sm"><AcademicCapIcon /> PREMIUM ASSISTANCE</h3>
+              <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-1 rounded font-bold group-hover:bg-emerald-100 transition-colors">Pesan Sekarang &rarr;</span>
             </div>
             <div className="space-y-3 flex-1">
               <PackageItem title="Paket Proposal" desc="Judul + Bab 1-3 + Mendeley + Revisi" price="Rp1.850.000" icon={<DocumentIcon />} />
@@ -105,9 +153,13 @@ export default function TabDashboard({ riwayatList, activeProject, router, handl
                      <p className="text-sm font-bold text-slate-800">{displayTitle}</p>
                      <p className="text-[10px] text-slate-500">{displayDesc}</p>
                      {!isAiTool && (item.is_unlocked ? (
-                       <button onClick={() => router.push(`/dashboard/dokumen?id=${item.id}`)} className="text-[10px] text-blue-600 font-semibold mt-1 hover:underline">Buka Dokumen</button>
+                       <button onClick={() => router.push(`/dashboard/dokumen?id=${item.id}`)} className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[10px] font-bold transition-colors">
+                         Buka Dokumen &rarr;
+                       </button>
                      ) : (
-                       <button onClick={() => handleBukaKunci(item.id)} disabled={isProcessing === item.id} className="text-[10px] text-amber-600 font-semibold mt-1">Buka Kunci (-1 Koin)</button>
+                       <button onClick={() => handleBukaKunci(item.id)} disabled={isProcessing === item.id} className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-bold shadow-sm transition-all disabled:opacity-50">
+                         🔒 Buka Kunci (-1 Koin)
+                       </button>
                      ))}
                    </div>
                  </div>
@@ -118,6 +170,14 @@ export default function TabDashboard({ riwayatList, activeProject, router, handl
            )}
          </div>
       </div>
+
+      <ConfirmModal 
+        isOpen={modalOpen} 
+        title="Konfirmasi Penggunaan Koin" 
+        desc={`Apakah kamu yakin ingin menggunakan ${selectedTool?.koin} koin untuk mengakses layanan ${selectedTool?.nama}? Koin akan dipotong secara otomatis.`}
+        onConfirm={confirmDeduction} 
+        onCancel={() => setModalOpen(false)} 
+      />
     </div>
   );
 }
