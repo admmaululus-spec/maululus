@@ -1,20 +1,24 @@
 import { NextResponse } from 'next/server';
 
+
+export const runtime = 'edge';
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { order_id, gross_amount, first_name, email, phone, item_name } = body;
 
-    // AMBIL SERVER KEY DARI ENVIRONMENT VARIABLE
+    // Ambil Server Key dari Environment Variable
     const serverKey = process.env.MIDTRANS_SERVER_KEY;
     
     if (!serverKey) {
-      console.error("MIDTRANS_SERVER_KEY belum diatur di .env.local!");
+      console.error("MIDTRANS_SERVER_KEY belum diatur!");
       return NextResponse.json({ error: 'Konfigurasi Server Midtrans belum lengkap.' }, { status: 500 });
     }
     
-    // Midtrans membutuhkan otorisasi format Basic Base64(ServerKey + ":")
-    const base64Key = Buffer.from(serverKey + ':').toString('base64');
+    // 2. UBAH CARA ENCODE BASE64 KHUSUS UNTUK EDGE RUNTIME
+    // Di Edge Runtime (Cloudflare), kita tidak bisa pakai Buffer. Kita pakai fungsi btoa() bawaan browser.
+    const base64Key = btoa(serverKey + ':');
 
     const payload = {
       transaction_details: {
