@@ -30,7 +30,7 @@ export default function AiToolsSection() {
       <div className="p-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-xl">🤖</span>
-          <h2 className="font-bold text-slate-800">Tarif Penggunaan AI Tools</h2>
+          <h2 className="font-bold text-slate-800">AI Tools Rate</h2>
         </div>
         {/* Tombol + Tambah Tool sudah dihapus sesuai instruksi */}
       </div>
