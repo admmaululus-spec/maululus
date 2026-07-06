@@ -46,7 +46,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Akses Ditolak: Signature tidak valid' }, { status: 403 });
     }
 
-    // Cek status pembayaran sukses
+    // Cek status 
     if (transaction_status === 'settlement' || (transaction_status === 'capture' && fraud_status === 'accept')) {
       
       if (!custom_field1) {
@@ -71,11 +71,11 @@ export async function POST(req: Request) {
       }
     }
 
-    // Return 200 OK ke Midtrans
+    // Return 200 OK 
     return NextResponse.json({ message: 'OK' }, { status: 200 });
 
   } catch (error: any) {
     console.error('Webhook Error:', error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+} 
