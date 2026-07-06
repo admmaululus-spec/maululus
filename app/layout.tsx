@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 
 // Konfigurasi Font Poppins
@@ -29,7 +28,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Maululus — Asisten AI untuk Skripsi & Penelitian",
     description: "Bantu temukan judul, susun proposal, dan kerangka penelitian lebih cepat dengan AI.",
-    url: "https://maululus.com", // Ganti dengan domain aslimu nanti
+    url: "https://maululus.id", // Ganti dengan domain aslimu
     siteName: "Maululus",
     locale: "id_ID",
     type: "website",
@@ -47,27 +46,27 @@ export default function RootLayout({
     "@context": "https://schema.org",
     "@type": "WebSite",
     "name": "Maululus",
-    "url": "https://maululus.com", // Ganti dengan domain aslimu nanti
+    "url": "https://maululus.id", // Ganti dengan domain aslimu
     "potentialAction": {
       "@type": "SearchAction",
-      "target": "https://maululus.com/search?q={search_term_string}",
+      "target": "https://maululus.id/search?q={search_term_string}",
       "query-input": "required name=search_term_string"
     },
     "hasPart": [
       {
         "@type": "WebPage",
         "name": "Generator Judul",
-        "url": "https://maululus.com/generator"
+        "url": "https://maululus.id/generator"
       },
       {
         "@type": "WebPage",
         "name": "AI Copilot",
-        "url": "https://maululus.com/dashboard/copilot"
+        "url": "https://maululus.id/dashboard/copilot"
       },
       {
         "@type": "WebPage",
         "name": "Daftar Gratis",
-        "url": "https://maululus.com/auth"
+        "url": "https://maululus.id/auth"
       }
     ]
   };
@@ -84,14 +83,7 @@ export default function RootLayout({
       </head>
       <body className={`${poppins.variable} font-sans antialiased text-slate-900 bg-slate-50`}>
         {children}
-
-        {/* 4. SCRIPT SNAP MIDTRANS (Menggunakan Environment Variables) */}
-        {/* Pastikan kamu sudah menambahkan NEXT_PUBLIC_MIDTRANS_CLIENT_KEY di file .env.local */}
-        <Script 
-          src="https://app.sandbox.midtrans.com/snap/snap.js" 
-          data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY} 
-          strategy="beforeInteractive"
-        />
+        {/* SCRIPT MIDTRANS SUDAH DIHAPUS DARI SINI AGAR TIDAK BENTROK DENGAN GOOGLE LOGIN */}
       </body>
     </html>
   );
