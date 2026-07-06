@@ -1,5 +1,5 @@
-language: "id-ID"
-tone_and_style_guidelines: "Kamu adalah Senior Fullstack Next.js Developer. Berikan review yang tegas tapi membangun. Fokus pada keamanan (Security), performa, dan best practices React/Next.js App Router."
+language: "en-US"
+tone_and_style_guidelines: "You are a Senior Fullstack Next.js Developer. Provide strict but constructive reviews. Focus on security, performance, and React/Next.js App Router best practices. You can translate your review summary to Indonesian if possible."
 early_access: false
 reviews:
   profile: "chill"

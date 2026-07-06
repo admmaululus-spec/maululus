@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 
@@ -22,22 +22,8 @@ export function useAuthHandler() {
   const [showResend, setShowResend] = useState(false);
   const [resendEmailTarget, setResendEmailTarget] = useState('');
 
-  useEffect(() => {
-    const checkUser = async () => {
-      // PERBAIKAN KEAMANAN: Gunakan getUser() untuk verifikasi token langsung ke server
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await routeUserBasedOnRole(user.id);
-      } else {
-        setIsLoading(false);
-      }
-    };
-    checkUser();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router]);
-
-  // Routing Cerdas berdasarkan Role
-  const routeUserBasedOnRole = async (userId: string) => {
+  // 1. PERBAIKAN: Pindahkan fungsi ini ke atas dan bungkus dengan useCallback
+  const routeUserBasedOnRole = useCallback(async (userId: string) => {
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('role')
@@ -55,7 +41,20 @@ export function useAuthHandler() {
     } else {
       router.replace('/dashboard');
     }
-  };
+  }, [router]);
+
+  // 2. PERBAIKAN: Masukkan routeUserBasedOnRole ke dalam dependency array
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await routeUserBasedOnRole(user.id);
+      } else {
+        setIsLoading(false);
+      }
+    };
+    checkUser();
+  }, [routeUserBasedOnRole]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,12 +83,14 @@ export function useAuthHandler() {
       } else {
         if (password !== confirmPassword) throw new Error('Password dan Konfirmasi Password tidak cocok!');
         
-        // PERBAIKAN VALIDASI WHATSAPP:
-        // Hapus karakter seperti spasi, tanda hubung (-), atau plus (+) agar format menjadi angka murni
+        // 3. PERBAIKAN LOGIKA WA: Bersihkan spasi/simbol dan wajibkan format angka yang ketat
         const cleanWhatsapp = whatsapp.replace(/[\s\-\+]/g, '');
+        
+        // Regex: Awalan 08 atau 62, lalu diikuti 7 hingga 13 digit angka (Total: 9 - 15 digit)
+        const isValidWA = /^(08|62)\d{7,13}$/.test(cleanWhatsapp);
 
-        if (!cleanWhatsapp.startsWith('08') && !cleanWhatsapp.startsWith('62')) {
-          throw new Error('Nomor WhatsApp tidak valid (Gunakan awalan 08 atau 62)');
+        if (!isValidWA) {
+          throw new Error('Nomor WhatsApp tidak valid (Gunakan angka saja, awalan 08 atau 62, panjang 9-15 digit)');
         }
 
         const { data, error } = await supabase.auth.signUp({ 
@@ -97,7 +98,7 @@ export function useAuthHandler() {
           password, 
           options: { 
             data: { 
-              whatsapp: cleanWhatsapp // Simpan nomor yang sudah dibersihkan
+              whatsapp: cleanWhatsapp 
             } 
           } 
         });
