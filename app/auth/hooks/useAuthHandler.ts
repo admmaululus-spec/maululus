@@ -24,14 +24,16 @@ export function useAuthHandler() {
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        router.replace('/dashboard');
+      // PERBAIKAN KEAMANAN: Gunakan getUser() untuk verifikasi token langsung ke server
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await routeUserBasedOnRole(user.id);
       } else {
         setIsLoading(false);
       }
     };
     checkUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   // Routing Cerdas berdasarkan Role
@@ -45,14 +47,23 @@ export function useAuthHandler() {
     if (error) console.error("Gagal mengambil profil:", error);
 
     const role = profile?.role?.toLowerCase();
-    if (role === 'admin') router.replace('/admin'); 
-    else if (role === 'analyst' || role === 'analis') router.replace('/admin/analis');
-    else router.replace('/dashboard');
+    
+    if (role === 'admin') {
+      router.replace('/admin'); 
+    } else if (role === 'analyst' || role === 'analis') {
+      router.replace('/admin/analis');
+    } else {
+      router.replace('/dashboard');
+    }
   };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true); setErrorMsg(''); setSuccessMsg(''); setShowResend(false);
+    setIsLoading(true); 
+    setErrorMsg(''); 
+    setSuccessMsg(''); 
+    setShowResend(false);
+    
     let isNavigating = false;
 
     try {
@@ -60,20 +71,37 @@ export function useAuthHandler() {
         const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
           if (error.message.includes('Email not confirmed')) {
-            setShowResend(true); setResendEmailTarget(email);
+            setShowResend(true); 
+            setResendEmailTarget(email);
             throw new Error('Email belum dikonfirmasi. Silakan cek kotak masuk/spam email Anda.');
           }
           throw error;
         }
-        if (authData.session) {
+        if (authData.user) {
           isNavigating = true;
-          await routeUserBasedOnRole(authData.session.user.id);
+          await routeUserBasedOnRole(authData.user.id);
         }
       } else {
         if (password !== confirmPassword) throw new Error('Password dan Konfirmasi Password tidak cocok!');
-        if (!whatsapp.startsWith('08') && !whatsapp.startsWith('62')) throw new Error('Nomor WhatsApp tidak valid (Gunakan awalan 08... atau 62...)');
+        
+        // PERBAIKAN VALIDASI WHATSAPP:
+        // Hapus karakter seperti spasi, tanda hubung (-), atau plus (+) agar format menjadi angka murni
+        const cleanWhatsapp = whatsapp.replace(/[\s\-\+]/g, '');
 
-        const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { whatsapp } } });
+        if (!cleanWhatsapp.startsWith('08') && !cleanWhatsapp.startsWith('62')) {
+          throw new Error('Nomor WhatsApp tidak valid (Gunakan awalan 08 atau 62)');
+        }
+
+        const { data, error } = await supabase.auth.signUp({ 
+          email, 
+          password, 
+          options: { 
+            data: { 
+              whatsapp: cleanWhatsapp // Simpan nomor yang sudah dibersihkan
+            } 
+          } 
+        });
+        
         if (error) throw error;
 
         if (data.session) {
@@ -83,8 +111,12 @@ export function useAuthHandler() {
         }
         
         setSuccessMsg('Pendaftaran berhasil! Silakan cek Email Anda untuk mengaktifkan akun.');
-        setIsLogin(true); setShowResend(true); setResendEmailTarget(email);
-        setPassword(''); setConfirmPassword(''); setWhatsapp('');
+        setIsLogin(true); 
+        setShowResend(true); 
+        setResendEmailTarget(email);
+        setPassword(''); 
+        setConfirmPassword(''); 
+        setWhatsapp('');
       }
     } catch (error: any) {
       setErrorMsg(error.message || 'Terjadi kesalahan saat autentikasi.');
@@ -95,10 +127,14 @@ export function useAuthHandler() {
 
   const handleResendEmail = async () => {
     if (!resendEmailTarget) return;
-    setIsLoading(true); setErrorMsg(''); setSuccessMsg('');
+    setIsLoading(true); 
+    setErrorMsg(''); 
+    setSuccessMsg('');
+    
     try {
       const { error } = await supabase.auth.resend({ type: 'signup', email: resendEmailTarget });
       if (error) throw error;
+      
       setSuccessMsg(`Email konfirmasi telah dikirim ulang ke ${resendEmailTarget}.`);
       setShowResend(false); 
     } catch (error: any) {
@@ -111,15 +147,19 @@ export function useAuthHandler() {
   const handleGoogleSuccess = async (credentialResponse: any) => {
     let isNavigating = false;
     try {
-      setIsLoading(true); setErrorMsg('');
+      setIsLoading(true); 
+      setErrorMsg('');
+      
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: credentialResponse.credential,
       });
+      
       if (error) throw error;
-      if (data.session) {
+      
+      if (data.user) {
         isNavigating = true;
-        await routeUserBasedOnRole(data.session.user.id);
+        await routeUserBasedOnRole(data.user.id);
       }
     } catch (error: any) {
       setErrorMsg(error.message || 'Gagal masuk dengan Google.');
