@@ -1,31 +1,40 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
 
 export const runtime = 'edge';
-
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(req: Request) {
   try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { get(name: string) { return cookieStore.get(name)?.value; } } }
+    );
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { judul } = await req.json();
 
     if (!judul) {
       return NextResponse.json({ error: 'Judul harus dipilih' }, { status: 400 });
     }
+    
+    const safeJudul = String(judul).substring(0, 300); // Mencegah input raksasa
 
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-3.5-flash',
       generationConfig: {
         responseMimeType: "application/json",
-        temperature: 0.3 // Rendah agar kerangka logis dan tidak ngelantur
+        temperature: 0.3
       }
     });
 
-    // ==========================================
-    // 1. GENERATE KERANGKA
-    // ==========================================
     const promptText = `
-      Kamu adalah Profesor ahli. Buatkan kerangka skripsi (outline) detail dari BAB 1 hingga BAB 5, dan SATU BAB TAMBAHAN berisi Rekomendasi Jurnal untuk skripsi berjudul: "${judul}".
+      Kamu adalah Profesor ahli. Buatkan kerangka skripsi (outline) detail dari BAB 1 hingga BAB 5, dan SATU BAB TAMBAHAN berisi Rekomendasi Jurnal untuk skripsi berjudul: "${safeJudul}".
       
       PENTING: Buat JSON Object dengan root key "outline" yang berisi array of objects.
       
@@ -50,17 +59,23 @@ export async function POST(req: Request) {
     `;
 
     const result = await model.generateContent(promptText);
-    const textOutput = result.response.text();
+    let textOutput = result.response.text();
+    textOutput = textOutput.replace(/```json/g, '').replace(/```/g, '').trim();
     
-    const parsedData = JSON.parse(textOutput);
+    let parsedData: any = {};
+    try {
+      parsedData = JSON.parse(textOutput);
+    } catch (e) {
+      return NextResponse.json({ error: 'Gagal membaca format data dari AI' }, { status: 500 });
+    }
+
     let outlineArray = parsedData.outline || [];
 
-    // ==========================================
-    // 2. AMBIL JURNAL ASLI DARI SEMANTIC SCHOLAR
-    // ==========================================
+    // Fallback Semantic Scholar
     try {
-      const searchKeyword = judul.replace(/(analisis|pengaruh|implementasi|terhadap|dengan|berbasis|untuk|dan|di|pada)/gi, '').trim();
-      const s2Url = `[https://api.semanticscholar.org/graph/v1/paper/search?query=$](https://api.semanticscholar.org/graph/v1/paper/search?query=$){encodeURIComponent(searchKeyword)}&limit=3&fields=title,authors,year,url`;
+      const searchKeyword = safeJudul.replace(/(analisis|pengaruh|implementasi|terhadap|dengan|berbasis|untuk|dan|di|pada)/gi, '').trim().substring(0, 100);
+      const s2Url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(searchKeyword)}&limit=3&fields=title,authors,year,url`;
+      
       const s2Response = await fetch(s2Url);
       
       if (s2Response.ok) {

@@ -1,23 +1,33 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
 
 export const runtime = 'edge';
-
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(req: Request) {
   try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { get(name: string) { return cookieStore.get(name)?.value; } } }
+    );
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { text } = await req.json();
 
     if (!text) {
       return NextResponse.json({ error: 'Teks tidak boleh kosong' }, { status: 400 });
     }
 
+    const safeText = String(text).substring(0, 5000); // Max ~5000 karakter
+
     const model = genAI.getGenerativeModel({
       model: 'gemini-3.5-flash',
-      generationConfig: {
-        temperature: 0.4, // Cukup rendah agar tetap baku dan tidak terlalu kreatif/melenceng
-      }
+      generationConfig: { temperature: 0.4 }
     });
 
     const promptText = `
@@ -29,13 +39,11 @@ export async function POST(req: Request) {
       3. Langsung berikan hasil parafrasenya saja, tanpa salam pengantar atau penutup.
 
       Teks Asli:
-      "${text}"
+      "${safeText}"
     `;
 
     const result = await model.generateContent(promptText);
-    const textOutput = result.response.text();
-
-    return NextResponse.json({ result: textOutput.trim() });
+    return NextResponse.json({ result: result.response.text().trim() });
 
   } catch (error: any) {
     console.error('Error proses parafrase:', error);
