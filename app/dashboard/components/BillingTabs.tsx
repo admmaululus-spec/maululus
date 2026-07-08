@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import Script from 'next/script'; // Tambahkan import Script
 import { supabase } from '@/app/lib/supabase';
 import { CoinIcon, WalletIcon, ReceiptIcon, SparklesIcon } from './IconsAndUI';
 
@@ -84,6 +85,12 @@ export function TabTopup({ koin }: any) {
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
+  // Tentukan URL Script Midtrans berdasarkan Environment
+  const isProd = process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === 'true';
+  const midtransUrl = isProd
+    ? 'https://app.midtrans.com/snap/snap.js'
+    : 'https://app.sandbox.midtrans.com/snap/snap.js';
+
   useEffect(() => {
     const fetchPackages = async () => {
       setLoading(true);
@@ -104,7 +111,7 @@ export function TabTopup({ koin }: any) {
 
       const orderId = `COIN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-      // 1. Minta Token Snap ke API Midtrans
+      // 1. Minta Token Snap ke API Payment yang sudah kita buat
       const res = await fetch('/api/payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -114,7 +121,7 @@ export function TabTopup({ koin }: any) {
           first_name: session.user.email?.split('@')[0] || 'User',
           email: session.user.email,
           phone: '-',
-          item_name: `Top Up ${pkg.koin} Koin Maululus`
+          item_name: pkg.nama // PENTING: Harus pkg.nama agar Webhook bisa cek database
         })
       });
 
@@ -123,27 +130,15 @@ export function TabTopup({ koin }: any) {
 
       // 2. Panggil Pop-Up Midtrans
       (window as any).snap.pay(data.token, {
-        onSuccess: async function(result: any) {
-          // JIKA BAYAR BERHASIL, TAMBAH KOIN KE DATABASE USER
-          const { data: currentUser } = await supabase.from('users_data').select('koin').eq('id', session.user.id).single();
-          const currentKoin = currentUser ? currentUser.koin : 0;
+        onSuccess: function(result: any) {
+          // KITA HAPUS UPDATE DATABASE DARI SINI KARENA WEBHOOK SUDAH MELAKUKANNYA
+          // Cukup berikan notifikasi ke pengguna
+          alert("Pembayaran berhasil diproses! Koin akan segera masuk ke akun Anda dalam beberapa saat.");
           
-          await supabase.from('users_data').update({ koin: currentKoin + pkg.koin }).eq('id', session.user.id);
-          
-          // --- CATAT KE TABEL TRANSACTIONS ---
-          await supabase.from('transactions').insert({
-            user_id: session.user.id,
-            user_email: session.user.email,
-            paket_nama: pkg.nama,
-            koin_jumlah: pkg.koin,
-            harga_rp: pkg.harga,
-            metode: 'Midtrans Gateway',
-            status: 'SUCCESS'
-          });
-          // ------------------------------------
-          
-          alert(`Berhasil! ${pkg.koin} Koin telah ditambahkan ke akun Anda.`);
-          window.location.reload();
+          // Refresh halaman setelah beberapa detik agar webhook sempat bekerja
+          setTimeout(() => {
+            window.location.reload();
+          }, 3000);
         },
         onPending: function() {
           alert("Selesaikan pembayaran untuk menerima koin.");
@@ -164,63 +159,72 @@ export function TabTopup({ koin }: any) {
   };
 
   return (
-    <div className="animate-in fade-in max-w-5xl mx-auto space-y-6 pb-10">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <span className="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><WalletIcon /></span>
-          <div>
-            <h2 className="text-2xl font-extrabold text-slate-800">Top Up Koin</h2>
-            <p className="text-sm text-slate-500">Beli koin untuk menggunakan seluruh fitur canggih AI Maululus.</p>
+    <>
+      {/* MENAMBAHKAN SCRIPT MIDTRANS HANYA DI HALAMAN INI */}
+      <Script 
+        src={midtransUrl}
+        data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
+        strategy="lazyOnload" 
+      />
+
+      <div className="animate-in fade-in max-w-5xl mx-auto space-y-6 pb-10">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <span className="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><WalletIcon /></span>
+            <div>
+              <h2 className="text-2xl font-extrabold text-slate-800">Top Up Koin</h2>
+              <p className="text-sm text-slate-500">Beli koin untuk menggunakan seluruh fitur canggih AI Maululus.</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {loading ? (
-         <div className="flex justify-center py-20">
-           <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {packages.map((pkg) => (
-            <div key={pkg.id} className={`bg-white border rounded-3xl p-6 shadow-sm flex flex-col justify-between transition-colors ${pkg.is_best_seller ? 'border-amber-400 bg-amber-50/20 transform md:-translate-y-4 relative shadow-xl' : 'border-slate-200 hover:border-blue-300'}`}>
-              
-              {pkg.is_best_seller && (
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-amber-400 text-amber-950 text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-md whitespace-nowrap">
-                  Paling Populer
-                </div>
-              )}
-              
-              <div>
-                <h3 className="text-lg font-bold text-slate-800 mb-1 mt-2">{pkg.nama}</h3>
-                <p className="text-[10px] text-slate-500 mb-6">{pkg.deskripsi}</p>
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {packages.map((pkg) => (
+              <div key={pkg.id} className={`bg-white border rounded-3xl p-6 shadow-sm flex flex-col justify-between transition-colors ${pkg.is_best_seller ? 'border-amber-400 bg-amber-50/20 transform md:-translate-y-4 relative shadow-xl' : 'border-slate-200 hover:border-blue-300'}`}>
                 
-                <div className="flex items-end gap-2 mb-6 border-b border-slate-200/50 pb-6">
-                  <span className={`text-5xl font-black ${pkg.is_best_seller ? 'text-amber-500' : 'text-slate-800'}`}>{pkg.koin}</span>
-                  <span className="text-sm font-bold text-slate-500 mb-1.5">Koin</span>
-                </div>
+                {pkg.is_best_seller && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-amber-400 text-amber-950 text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-md whitespace-nowrap">
+                    Paling Populer
+                  </div>
+                )}
                 
-                <ul className="space-y-3 mb-8">
-                  <li className="text-xs font-semibold text-slate-600 flex items-center gap-2">
-                    <span className={`${pkg.is_best_seller ? 'text-amber-500' : 'text-blue-500'}`}>✔</span> Akses semua AI Tools
-                  </li>
-                  <li className="text-xs font-semibold text-slate-600 flex items-center gap-2">
-                    <span className={`${pkg.is_best_seller ? 'text-amber-500' : 'text-blue-500'}`}>✔</span> Tanpa masa hangus
-                  </li>
-                </ul>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-1 mt-2">{pkg.nama}</h3>
+                  <p className="text-[10px] text-slate-500 mb-6">{pkg.deskripsi}</p>
+                  
+                  <div className="flex items-end gap-2 mb-6 border-b border-slate-200/50 pb-6">
+                    <span className={`text-5xl font-black ${pkg.is_best_seller ? 'text-amber-500' : 'text-slate-800'}`}>{pkg.koin}</span>
+                    <span className="text-sm font-bold text-slate-500 mb-1.5">Koin</span>
+                  </div>
+                  
+                  <ul className="space-y-3 mb-8">
+                    <li className="text-xs font-semibold text-slate-600 flex items-center gap-2">
+                      <span className={`${pkg.is_best_seller ? 'text-amber-500' : 'text-blue-500'}`}>✔</span> Akses semua AI Tools
+                    </li>
+                    <li className="text-xs font-semibold text-slate-600 flex items-center gap-2">
+                      <span className={`${pkg.is_best_seller ? 'text-amber-500' : 'text-blue-500'}`}>✔</span> Tanpa masa hangus
+                    </li>
+                  </ul>
+                </div>
+
+                <button 
+                  onClick={() => handleBuyCoin(pkg)} 
+                  disabled={isProcessing === pkg.id}
+                  className={`w-full font-bold py-4 rounded-xl transition-all active:scale-95 disabled:opacity-50 ${pkg.is_best_seller ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-600/30' : 'bg-slate-50 border border-slate-200 text-blue-700 hover:bg-slate-100'}`}
+                >
+                  {isProcessing === pkg.id ? 'Memproses...' : `Beli ${formatRp(pkg.harga)}`}
+                </button>
+
               </div>
-
-              <button 
-                onClick={() => handleBuyCoin(pkg)} 
-                disabled={isProcessing === pkg.id}
-                className={`w-full font-bold py-4 rounded-xl transition-all active:scale-95 disabled:opacity-50 ${pkg.is_best_seller ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-600/30' : 'bg-slate-50 border border-slate-200 text-blue-700 hover:bg-slate-100'}`}
-              >
-                {isProcessing === pkg.id ? 'Memproses...' : `Beli ${formatRp(pkg.harga)}`}
-              </button>
-
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   );
 }

@@ -118,7 +118,7 @@ export default function DashboardPage() {
       
       <CenterContent activeMenu={activeMenu} setActiveMenu={setActiveMenu} setIsSidebarOpen={setIsSidebarOpen} userName={userName} userEmail={userEmail} userWhatsapp={userWhatsapp} koin={koin} riwayatList={riwayatList} premiumProjects={premiumProjects} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} router={router} />
       
-      <RightPanel activeMenu={activeMenu} koin={koin} isPro={isPro} />
+      <RightPanel activeMenu={activeMenu} setActiveMenu={setActiveMenu} koin={koin} isPro={isPro} />
     </div>
   );
 }

@@ -17,12 +17,40 @@ export async function POST(req: Request) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const userId = session.user.id;
     const { judul } = await req.json();
 
     if (!judul) {
       return NextResponse.json({ error: 'Judul harus dipilih' }, { status: 400 });
     }
     
+    // ==========================================
+    // 1. CEK HARGA DAN POTONG KOIN
+    // ==========================================
+    // Asumsi ID di database admin adalah 'outline'
+    const { data: pricingData } = await supabase.from('ai_tools_pricing').select('koin').eq('id', 'outline').single();
+    const HARGA_KOIN = pricingData?.koin !== undefined ? pricingData.koin : 5; // Fallback ke 5 koin
+
+    const { data: profile } = await supabase.from('profiles').select('koin').eq('id', userId).single();
+    const currentKoin = profile?.koin || 0;
+
+    if (currentKoin < HARGA_KOIN) {
+      return NextResponse.json({ error: `Koin tidak cukup! Butuh ${HARGA_KOIN} Koin.` }, { status: 402 });
+    }
+
+    if (HARGA_KOIN > 0) {
+      const { error: deductError } = await supabase.from('profiles').update({ koin: currentKoin - HARGA_KOIN }).eq('id', userId);
+      if (deductError) throw new Error("Gagal memotong koin");
+    }
+
+    // Catat histori pemakaian
+    await supabase.from('ai_tools_history').insert({
+      user_id: userId,
+      tool_name: 'Buat Outline',
+      input_data: `Judul: ${String(judul).substring(0, 30)}...`
+    });
+    // ==========================================
+
     const safeJudul = String(judul).substring(0, 300); // Mencegah input raksasa
 
     const model = genAI.getGenerativeModel({ 
@@ -110,7 +138,10 @@ export async function POST(req: Request) {
       console.log("Semantic Scholar API gagal, fallback ke referensi Gemini berjalan aman.");
     }
 
-    return NextResponse.json({ outline: outlineArray });
+    return NextResponse.json({ 
+      outline: outlineArray,
+      sisa_koin: currentKoin - HARGA_KOIN 
+    });
 
   } catch (error: any) {
     console.error('Error generating outline:', error);

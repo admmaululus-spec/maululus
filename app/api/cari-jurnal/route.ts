@@ -15,11 +15,38 @@ export async function POST(req: Request) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const userId = session.user.id;
     const { query } = await req.json();
 
     if (!query) {
       return NextResponse.json({ error: 'Query pencarian tidak boleh kosong' }, { status: 400 });
     }
+
+    // ==========================================
+    // 1. CEK HARGA DAN POTONG KOIN
+    // ==========================================
+    const { data: pricingData } = await supabase.from('ai_tools_pricing').select('koin').eq('id', 'cari-jurnal').single();
+    const HARGA_KOIN = pricingData?.koin !== undefined ? pricingData.koin : 5; // Fallback ke 5
+
+    const { data: profile } = await supabase.from('profiles').select('koin').eq('id', userId).single();
+    const currentKoin = profile?.koin || 0;
+
+    if (currentKoin < HARGA_KOIN) {
+      return NextResponse.json({ error: `Koin tidak cukup! Butuh ${HARGA_KOIN} Koin.` }, { status: 402 });
+    }
+
+    if (HARGA_KOIN > 0) {
+      const { error: deductError } = await supabase.from('profiles').update({ koin: currentKoin - HARGA_KOIN }).eq('id', userId);
+      if (deductError) throw new Error("Gagal memotong koin");
+    }
+
+    // Catat histori pemakaian
+    await supabase.from('ai_tools_history').insert({
+      user_id: userId,
+      tool_name: 'Cari Jurnal',
+      input_data: `Query: ${String(query).substring(0, 30)}...`
+    });
+    // ==========================================
 
     // Batasi input untuk keamanan dan efisiensi API
     const rawQuery = String(query).substring(0, 150);
@@ -55,7 +82,10 @@ export async function POST(req: Request) {
       };
     });
 
-    return NextResponse.json({ results: formattedResults });
+    return NextResponse.json({ 
+      results: formattedResults,
+      sisa_koin: currentKoin - HARGA_KOIN 
+    });
 
   } catch (error: any) {
     console.error('Error cari jurnal:', error);

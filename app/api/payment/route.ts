@@ -13,8 +13,11 @@ export async function POST(req: Request) {
       { cookies: { get(name: string) { return cookieStore.get(name)?.value; } } }
     );
     
+    // Ambil session dan ID User
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const userId = session.user.id; // KITA BUTUH INI UNTUK CUSTOM_FIELD1
 
     const body = await req.json();
     const { order_id, first_name, email, phone, item_name } = body;
@@ -47,6 +50,7 @@ export async function POST(req: Request) {
     
     const base64Key = btoa(serverKey + ':');
 
+    // 3. PAYLOAD MIDTRANS (Tambahkan custom_field di sini)
     const payload = {
       transaction_details: {
         order_id: order_id,
@@ -62,7 +66,10 @@ export async function POST(req: Request) {
         price: Math.round(validGrossAmount),
         quantity: 1,
         name: String(item_name).substring(0, 50)
-      }]
+      }],
+      // INI SANGAT PENTING AGAR WEBHOOK TAHU SIAPA YANG BAYAR DAN PAKET APA
+      custom_field1: userId,
+      custom_field2: String(item_name).substring(0, 50)
     };
 
     const response = await fetch('https://app.sandbox.midtrans.com/snap/v1/transactions', {

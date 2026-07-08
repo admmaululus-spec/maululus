@@ -14,9 +14,12 @@ export async function POST(req: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { cookies: { get(name: string) { return cookieStore.get(name)?.value; } } }
     );
+    
+    // Autentikasi
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const userId = session.user.id; // Simpan ID User
     const body = await req.json();
     const { universitas, jurusan, minat, masalah, metodologi, jenisKarya } = body;
 
@@ -24,7 +27,49 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Universitas dan Jurusan harus diisi' }, { status: 400 });
     }
 
-    // Batasi input untuk keamanan
+    // =========================================================
+    // 1. CEK HARGA FITUR DARI DATABASE ADMIN (Tabel ai_tools_pricing)
+    // =========================================================
+    // Catatan: Pastikan ID tool di database adalah 'generator' (atau sesuaikan jika berbeda)
+    const { data: pricingData } = await supabase
+      .from('ai_tools_pricing')
+      .select('koin')
+      .eq('id', 'generator') 
+      .single();
+    
+    // Jika tidak ditemukan di tabel, set harga default (misal 5)
+    const HARGA_KOIN = pricingData?.koin !== undefined ? pricingData.koin : 5;
+
+    // =========================================================
+    // 2. CEK SALDO DAN POTONG KOIN
+    // =========================================================
+    const { data: profile } = await supabase.from('profiles').select('koin').eq('id', userId).single();
+    const currentKoin = profile?.koin || 0;
+
+    // Jika koin kurang, lemparkan error 402 agar frontend memunculkan popup Top Up
+    if (currentKoin < HARGA_KOIN) {
+      return NextResponse.json({ error: `Koin tidak cukup! Butuh ${HARGA_KOIN} Koin.` }, { status: 402 });
+    }
+
+    // Eksekusi potong koin (Jika harganya lebih dari 0)
+    if (HARGA_KOIN > 0) {
+      const { error: deductError } = await supabase
+        .from('profiles')
+        .update({ koin: currentKoin - HARGA_KOIN })
+        .eq('id', userId);
+        
+      if (deductError) throw new Error("Gagal memotong koin di database.");
+    }
+
+    // Catat histori penggunaan AI agar muncul di dashboard user
+    await supabase.from('ai_tools_history').insert({
+      user_id: userId,
+      tool_name: 'Buat Judul',
+      input_data: `Jurusan: ${String(jurusan).substring(0,25)}...`
+    });
+    // =========================================================
+
+    // Batasi input untuk keamanan (Sesuai kodingan aslimu)
     const safeUniversitas = String(universitas).substring(0, 100);
     const safeJurusan = String(jurusan).substring(0, 100);
     const safeMinat = minat ? String(minat).substring(0, 300) : '';
@@ -78,7 +123,13 @@ export async function POST(req: Request) {
       // JSON Sanitizer: Hapus markdown block ```json jika AI membandel
       textOutput = textOutput.replace(/```json/g, '').replace(/```/g, '').trim();
       const parsedData = JSON.parse(textOutput);
-      return NextResponse.json(parsedData);
+      
+      // KEMBALIKAN DATA ASLI + SISA KOIN
+      return NextResponse.json({
+        ...parsedData,
+        sisa_koin: currentKoin - HARGA_KOIN
+      });
+
     } catch (parseError) {
       console.error("Gagal parse JSON dari AI:", textOutput);
       return NextResponse.json({ error: `Format balasan AI salah.` }, { status: 500 });
