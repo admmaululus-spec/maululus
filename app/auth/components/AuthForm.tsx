@@ -39,43 +39,99 @@ export default function AuthForm() {
         )}
 
         {auth.showResend && (
-          <button onClick={auth.handleResendEmail} disabled={auth.isLoading} className="mb-6 w-full rounded-xl bg-indigo-50 p-3 text-xs font-bold text-indigo-600 border border-indigo-100 hover:bg-indigo-100 hover:text-indigo-700 transition-colors flex items-center justify-center gap-2">
+          <button 
+            onClick={auth.handleResendEmail} 
+            disabled={auth.isLoading} 
+            className="mb-6 w-full rounded-xl bg-indigo-50 p-3 text-xs font-bold text-indigo-600 border border-indigo-100 hover:bg-indigo-100 hover:text-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+          >
             Belum terima? Kirim Ulang Email Konfirmasi
           </button>
         )}
 
         <form onSubmit={auth.handleAuth} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email Kampus / Pribadi</label>
-            <input type="email" placeholder="nama@email.com" value={auth.email} onChange={(e) => auth.setEmail(e.target.value)} required className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-4 text-sm text-slate-800 outline-none focus:border-slate-400 focus:bg-white transition-all" />
+            <label htmlFor="email" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest cursor-pointer">Email Kampus / Pribadi</label>
+            <input 
+              id="email"
+              type="email" 
+              placeholder="nama@email.com" 
+              value={auth.email} 
+              onChange={(e) => auth.setEmail(e.target.value)} 
+              disabled={auth.isLoading}
+              required 
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-4 text-sm text-slate-800 outline-none focus:border-slate-400 focus:bg-white transition-all disabled:opacity-60" 
+            />
           </div>
 
           {!auth.isLogin && (
             <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nomor WhatsApp</label>
-              <input type="number" placeholder="081234567890" value={auth.whatsapp} onChange={(e) => auth.setWhatsapp(e.target.value)} required className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-4 text-sm text-slate-800 outline-none focus:border-slate-400 focus:bg-white transition-all" />
+              <label htmlFor="whatsapp" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest cursor-pointer">Nomor WhatsApp</label>
+              <input 
+                id="whatsapp"
+                type="tel" 
+                placeholder="081234567890" 
+                value={auth.whatsapp} 
+                onChange={(e) => auth.setWhatsapp(e.target.value)} 
+                disabled={auth.isLoading}
+                required 
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-4 text-sm text-slate-800 outline-none focus:border-slate-400 focus:bg-white transition-all disabled:opacity-60" 
+              />
             </div>
           )}
 
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Password</label>
-              <button type="button" onClick={() => auth.setShowPassword(!auth.showPassword)} className="text-[9px] font-bold text-slate-400 hover:text-slate-900 uppercase tracking-widest">
+              <label htmlFor="password" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest cursor-pointer">Password</label>
+              <button 
+                type="button" 
+                onClick={() => auth.setShowPassword(!auth.showPassword)} 
+                className="text-[9px] font-bold text-slate-400 hover:text-slate-900 uppercase tracking-widest"
+              >
                 {auth.showPassword ? 'Tutup' : 'Lihat'}
               </button>
             </div>
-            <input type={auth.showPassword ? "text" : "password"} placeholder="Minimal 6 karakter" value={auth.password} onChange={(e) => auth.setPassword(e.target.value)} required minLength={6} className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-4 text-sm text-slate-800 outline-none focus:border-slate-400 focus:bg-white transition-all" />
+            <input 
+              id="password"
+              type={auth.showPassword ? "text" : "password"} 
+              placeholder="Minimal 6 karakter" 
+              value={auth.password} 
+              onChange={(e) => auth.setPassword(e.target.value)} 
+              disabled={auth.isLoading}
+              required 
+              minLength={6} 
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-4 text-sm text-slate-800 outline-none focus:border-slate-400 focus:bg-white transition-all disabled:opacity-60" 
+            />
           </div>
 
           {!auth.isLogin && (
             <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Konfirmasi Password</label>
-              <input type={auth.showPassword ? "text" : "password"} placeholder="Ketik ulang password" value={auth.confirmPassword} onChange={(e) => auth.setConfirmPassword(e.target.value)} required minLength={6} className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-4 text-sm text-slate-800 outline-none focus:border-slate-400 focus:bg-white transition-all" />
+              <label htmlFor="confirmPassword" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest cursor-pointer">Konfirmasi Password</label>
+              <input 
+                id="confirmPassword"
+                type={auth.showPassword ? "text" : "password"} 
+                placeholder="Ketik ulang password" 
+                value={auth.confirmPassword} 
+                onChange={(e) => auth.setConfirmPassword(e.target.value)} 
+                disabled={auth.isLoading}
+                required 
+                minLength={6} 
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-4 text-sm text-slate-800 outline-none focus:border-slate-400 focus:bg-white transition-all disabled:opacity-60" 
+              />
             </div>
           )}
 
-          <button type="submit" disabled={auth.isLoading} className="w-full rounded-xl bg-slate-900 p-4 mt-6 text-white text-sm font-bold tracking-wide hover:bg-slate-800 disabled:opacity-70 transition-all flex justify-center items-center active:scale-[0.98]">
-            {auth.isLoading && auth.email ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-white"></div> : auth.isLogin ? 'Masuk dengan Email' : 'Daftar Sekarang'}
+          <button 
+            type="submit" 
+            disabled={auth.isLoading} 
+            className="w-full rounded-xl bg-slate-900 p-4 mt-6 text-white text-sm font-bold tracking-wide hover:bg-slate-800 disabled:opacity-70 transition-all flex justify-center items-center active:scale-[0.98]"
+          >
+            {auth.isLoading && auth.email ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-white"></div>
+            ) : auth.isLogin ? (
+              'Masuk dengan Email'
+            ) : (
+              'Daftar Sekarang'
+            )}
           </button>
         </form>
 
@@ -88,13 +144,28 @@ export default function AuthForm() {
           <GoogleLogin
             onSuccess={auth.handleGoogleSuccess}
             onError={() => auth.setErrorMsg('Login dengan Google dibatalkan atau gagal.')}
-            useOneTap={false} theme="outline" size="large" shape="pill" text="continue_with" width="100%"
+            useOneTap={false} 
+            theme="outline" 
+            size="large" 
+            shape="pill" 
+            text="continue_with" 
           />
         </div>
 
         <div className="mt-8 pt-8 border-t border-slate-100 text-center text-xs text-slate-400 font-medium">
           {auth.isLogin ? 'Belum punya akun? ' : 'Sudah punya akun? '}
-          <button type="button" onClick={() => { auth.setIsLogin(!auth.isLogin); auth.setErrorMsg(''); auth.setSuccessMsg(''); auth.setPassword(''); auth.setConfirmPassword(''); auth.setShowResend(false); }} className="font-bold text-slate-900 hover:underline transition-all">
+          <button 
+            type="button" 
+            onClick={() => { 
+              auth.setIsLogin(!auth.isLogin); 
+              auth.setErrorMsg(''); 
+              auth.setSuccessMsg(''); 
+              auth.setPassword(''); 
+              auth.setConfirmPassword(''); 
+              auth.setShowResend(false); 
+            }} 
+            className="font-bold text-slate-900 hover:underline transition-all"
+          >
             {auth.isLogin ? 'Daftar di sini' : 'Masuk di sini'}
           </button>
         </div>
