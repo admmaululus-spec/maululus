@@ -131,16 +131,16 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {packages.map((pkg, idx) => (
-          <div key={pkg.id} className={`bg-white border border-slate-200 rounded-3xl p-8 shadow-sm flex flex-col justify-between hover:border-emerald-200 transition-all ${idx === 1 ? 'bg-[#0B1525] border-blue-900 shadow-xl transform lg:-translate-y-4' : ''}`}>
+          <div key={pkg.id} className={`bg-white border border-slate-200 rounded-3xl p-8 shadow-sm flex flex-col justify-between hover:border-emerald-200 transition-all z-10${idx === 1 ? 'bg-[#0B1525] border-blue-900 shadow-xl transform lg:-translate-y-4'  : ''}`}>
              <div>
                <div className="flex items-center justify-between mb-2">
-                 <h3 className={`text-lg font-bold ${idx === 1 ? 'text-white' : 'text-slate-800'}`}>{pkg.nama}</h3>
+                 <h3 className={`text-lg font-bold ${idx === 1 ? 'text-black' : 'text-slate-800'}`}>{pkg.nama}</h3>
                  {idx === 1 && <span className="bg-amber-400 text-amber-950 text-[9px] font-bold px-2 py-1 rounded-md">BEST SELLER</span>}
                </div>
                <p className={`text-xs mb-6 leading-relaxed ${idx === 1 ? 'text-slate-400' : 'text-slate-500'}`}>{pkg.deskripsi}</p>
                <ul className="space-y-3 mb-8">
                  {pkg.fitur?.map((f: string, i: number) => (
-                   <li key={i} className={`text-sm flex items-center gap-2 ${idx === 1 ? 'text-white' : 'text-slate-700'}`}><span className="text-emerald-500">✔</span> {f}</li>
+                   <li key={i} className={`text-sm flex items-center gap-2 ${idx === 1 ? 'text-black' : 'text-slate-700'}`}><span className="text-emerald-500">✔</span> {f}</li>
                  ))}
                </ul>
              </div>
