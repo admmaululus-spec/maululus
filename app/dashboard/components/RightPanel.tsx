@@ -148,7 +148,7 @@ export default function RightPanel({ activeMenu, setActiveMenu, koin, isPro }: a
                 </div>
               </div>
 
-              {/* Promo / Bantuan Expert */}
+              {/* Promo / Bantuan Expert*/}
               <div className="bg-[#0B1525] rounded-2xl p-5 relative overflow-hidden text-center cursor-pointer hover:ring-2 hover:ring-amber-500 transition-all group" onClick={() => setActiveMenu('expert')}>
                  <h4 className="text-sm font-bold text-white mb-2 relative z-10 group-hover:text-amber-400 transition-colors">Butuh bantuan personal?</h4>
                  <p className="text-[10px] text-slate-400 mb-4 relative z-10">Tingkatkan ke Expert Assistance dan didampingi expert berpengalaman.</p>

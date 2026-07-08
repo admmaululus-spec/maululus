@@ -160,7 +160,7 @@ export function TabTopup({ koin }: any) {
 
   return (
     <>
-      {/* MENAMBAHKAN SCRIPT MIDTRANS HANYA DI HALAMAN INI */}
+      {/* MENAMBAHKAN SCRIPT MIDTRANS HANYA DI HALAMAN yang ini*/}
       <Script 
         src={midtransUrl}
         data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
