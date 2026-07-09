@@ -3,7 +3,9 @@ import { createServerClient } from '@supabase/ssr';
 
 export async function middleware(request: NextRequest) {
   // 1. Setup response & cookie handling standar terbaru @supabase/ssr
-  let supabaseResponse = NextResponse.next({ request });
+  let supabaseResponse = NextResponse.next({
+    request,
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,7 +17,9 @@ export async function middleware(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({ request });
+          supabaseResponse = NextResponse.next({
+            request,
+          });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );
@@ -25,7 +29,6 @@ export async function middleware(request: NextRequest) {
   );
 
   // 2. VALIDASI KEAMANAN KRITIS: Gunakan getUser(), JANGAN getSession()
-  // Ini memastikan token divalidasi langsung ke server Supabase
   const { data: { user } } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
@@ -35,18 +38,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // 4. Proteksi Halaman Dashboard
+  // 4. Proteksi Halaman Dashboard User
   if (path.startsWith('/dashboard') && !user) {
     return NextResponse.redirect(new URL('/auth', request.url));
   }
 
-  // 5. Proteksi Halaman Admin & Pembagian Role
-  if (path.startsWith('/admin')) {
+  // 5. Proteksi Halaman Admin & Analis (Mencakup /admin, /analis, dan /analyst)
+  if (path.startsWith('/admin') || path.startsWith('/analis') || path.startsWith('/analyst')) {
+    
+    // Jika belum login, tendang ke halaman auth
     if (!user) {
       return NextResponse.redirect(new URL('/auth', request.url));
     }
 
-    // Ambil data profile dari DB secara real-time
+    // Ambil data profile (role) dari DB
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -55,9 +60,8 @@ export async function middleware(request: NextRequest) {
 
     const role = profile?.role?.toLowerCase() || 'user';
 
-    // Pengecekan Khusus Halaman Analis
-    if (path.startsWith('/admin/analis')) {
-      // Yang boleh masuk ke /admin/analis adalah Admin atau Analis
+    // Pengecekan Khusus Halaman Analis (Bisa diakses Admin ATAU Analis)
+    if (path.includes('/analis') || path.includes('/analyst')) {
       if (role !== 'admin' && role !== 'analyst' && role !== 'analis') {
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
@@ -73,10 +77,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // PENTING: Gunakan matcher regex ini. 
-  // Ini akan menjalankan middleware di SEMUA halaman kecuali file statis (gambar, css, next/static).
-  // Jauh lebih aman karena jika besok kamu membuat folder /super-admin, dia otomatis terproteksi.
+  // PENTING: Gunakan matcher regex ini.
+  // PENGECUALIAN DITAMBAHKAN: api/webhook/midtrans dimasukkan ke dalam exclude (!)
+  // agar request dari server Midtrans tidak perlu dicek session-nya (menghindari error/timeout)
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/webhook/midtrans|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
