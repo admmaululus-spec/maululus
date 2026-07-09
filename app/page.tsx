@@ -49,11 +49,22 @@ const FadeIn = ({ children, delay = 0, className = '' }: { children: ReactNode, 
 // === HALAMAN UTAMA ===
 export default function Home() {
   const router = useRouter();
+  const [packages, setPackages] = useState<any[]>([]);
 
   // ⚠️ DAFTAR EMAIL ADMIN
   const ADMIN_EMAILS = ['vianeyricky@gmail.com', 'emailkamu@gmail.com']; 
 
   useEffect(() => {
+    // Tarik data Paket Expert untuk ditampilkan ke Publik / Midtrans
+    const fetchPackages = async () => {
+      const { data } = await supabase
+        .from('expert_packages')
+        .select('*')
+        .order('harga', { ascending: true });
+      if (data) setPackages(data);
+    };
+    fetchPackages();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
         const userEmail = session.user.email || '';
@@ -71,6 +82,15 @@ export default function Home() {
     
   }, [router]);
 
+  // Format IDR untuk memenuhi syarat Midtrans (Menggunakan Rupiah)
+  const formatRp = (angka: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(angka);
+
+  // Fungsi pemesanan publik
+  const handlePesanPublik = () => {
+    alert("Silakan Daftar atau Masuk terlebih dahulu untuk melakukan pemesanan dan mengakses dashboard pengerjaan proyek Kamu.");
+    router.push('/auth');
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-[#0f2a4a] selection:bg-green-200">
       
@@ -78,28 +98,22 @@ export default function Home() {
       <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md transition-all">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
           
-          {/* Logo (Warna Baru: Navy & Hijau) */}
           <div className="flex items-center gap-2">
             <Link href="/" className="text-2xl font-extrabold tracking-tight text-[#0f2a4a]">
               Mau<span className="text-green-500">lulus</span>
             </Link>
           </div>
 
-          {/* Menu Desktop */}
           <div className="hidden md:flex items-center gap-8">
             <nav className="flex items-center gap-8 font-medium text-sm text-slate-500">
               <a href="#beranda" className="hover:text-[#0f2a4a] transition-colors">Beranda</a>
               <a href="#fitur" className="hover:text-[#0f2a4a] transition-colors">Fitur</a>
               <a href="#cara-kerja" className="hover:text-[#0f2a4a] transition-colors">Cara Kerja</a>
-              {/* Menu Analis Baru */}
-              <a href="/analis" className="hover:text-[#0f2a4a] transition-colors">Analis</a>
+              <a href="#layanan" className="hover:text-green-600 font-bold transition-colors">Layanan & Harga</a>
             </nav>
             
-            
-            {/* Garis Pemisah (Divider) */}
             <div className="h-5 w-px bg-slate-200"></div>
             
-            {/* Area Autentikasi */}
             <div className="flex items-center gap-4">
               <Link href="/auth" className="text-sm font-bold text-slate-600 hover:text-[#0f2a4a] transition-colors px-2">
                 Masuk
@@ -110,24 +124,20 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Menu Mobile */}
           <div className="md:hidden flex items-center gap-4">
             <Link href="/auth" className="text-sm font-bold text-[#0f2a4a]">
               Masuk
             </Link>
           </div>
-
         </div>
       </header>
 
       <main className="overflow-x-hidden">
         {/* 1. HERO SECTION */}
         <section id="beranda" className="relative flex min-h-[90vh] flex-col items-center justify-center px-6 pt-16 pb-20">
-          {/* Glow Hijau di background */}
           <div className="absolute top-10 left-1/2 -z-10 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-green-500/10 blur-[120px]"></div>
           
           <FadeIn className="max-w-4xl text-center w-full z-10">
-            {/* Badge Hijau */}
             <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-green-200/50 bg-green-50/50 px-5 py-2 text-xs font-bold uppercase tracking-widest text-green-700 shadow-sm backdrop-blur-sm">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -144,25 +154,22 @@ export default function Home() {
             </h1>
             
             <p className="mx-auto mb-10 max-w-2xl text-lg font-medium text-slate-500 sm:text-xl leading-relaxed">
-              Udah Mau Lulus ya ?. Maululus membantu mahasiswa menemukan judul skripsi, menyusun proposal, mencari referensi jurnal, dan membangun kerangka penelitian lebih cepat dengan bantuan AI.
+              Udah Mau Lulus ya? Maululus membantu mahasiswa menemukan judul skripsi, menyusun proposal, mencari referensi jurnal, dan membangun kerangka penelitian lebih cepat dengan bantuan AI.
             </p>
             
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              {/* Tombol CTA Hijau */}
               <Link href="/generator" className="w-full flex items-center justify-center gap-2 rounded-2xl bg-green-500 px-8 py-4 text-sm font-bold text-white shadow-xl shadow-green-500/20 transition-all hover:bg-green-600 hover:-translate-y-1 sm:w-auto uppercase tracking-wide">
                 Mulai Generate Judul
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
               </Link>
-              <a href="#fitur" className="w-full flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-8 py-4 text-sm font-bold text-slate-700 transition-all hover:border-green-300 hover:bg-slate-50 sm:w-auto uppercase tracking-wide">
-                Eksplor Fitur
+              <a href="#layanan" className="w-full flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-8 py-4 text-sm font-bold text-slate-700 transition-all hover:border-green-300 hover:bg-slate-50 sm:w-auto uppercase tracking-wide">
+                Lihat Paket Expert
               </a>
             </div>
           </FadeIn>
 
-          {/* BANNER FITUR (Trust Badge) */}
           <FadeIn delay={400} className="w-full max-w-6xl mt-24 z-10">
             <div className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 md:gap-0 divide-y md:divide-y-0 md:divide-x divide-slate-100">
-              
               <div className="flex items-start md:items-center gap-4 px-2 md:px-6 flex-1 w-full pt-4 md:pt-0 first:pt-0">
                 <div className="h-12 w-12 shrink-0 flex items-center justify-center text-green-500">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" /></svg>
@@ -172,7 +179,6 @@ export default function Home() {
                   <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">Bantu riset, ide, outline, hingga penulisan.</p>
                 </div>
               </div>
-
               <div className="flex items-start md:items-center gap-4 px-2 md:px-6 flex-1 w-full pt-4 md:pt-0">
                 <div className="h-12 w-12 shrink-0 flex items-center justify-center text-green-500">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 12h7.5M8.25 15h7.5M8.25 18h7.5" /></svg>
@@ -182,7 +188,6 @@ export default function Home() {
                   <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">Referensi jurnal & buku akurat dan relevan.</p>
                 </div>
               </div>
-
               <div className="flex items-start md:items-center gap-4 px-2 md:px-6 flex-1 w-full pt-4 md:pt-0">
                 <div className="h-12 w-12 shrink-0 flex items-center justify-center text-green-500">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-9 h-9"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -192,12 +197,11 @@ export default function Home() {
                   <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">Skripsi selesai lebih cepat, kualitas terjaga.</p>
                 </div>
               </div>
-
             </div>
           </FadeIn>
         </section>
 
-        {/* 2. SECTION: MASALAH MAHASISWA (Background Navy) */}
+        {/* 2. SECTION: MASALAH MAHASISWA */}
         <section className="bg-[#0f2a4a] py-24 text-white">
           <div className="mx-auto max-w-7xl px-6">
             <FadeIn>
@@ -206,7 +210,6 @@ export default function Home() {
                 <p className="mt-4 text-slate-300 text-lg">Kami tahu persis apa yang membuat skripsimu tidak kunjung selesai.</p>
               </div>
             </FadeIn>
-
             <div className="grid gap-6 md:grid-cols-3">
               <FadeIn delay={100} className="rounded-3xl bg-slate-800/40 p-8 border border-slate-700/50 hover:bg-slate-800/60 transition-colors">
                 <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-700/50 text-green-400">
@@ -233,45 +236,42 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 3. FEATURE DETAIL SECTION */}
-        <section id="fitur" className="py-24 sm:py-32 scroll-mt-20">
+        {/* 3. LAYANAN & HARGA (KHUSUS REVIEW MIDTRANS) */}
+        <section id="layanan" className="py-24 bg-white scroll-mt-20">
           <div className="mx-auto max-w-7xl px-6">
-            <FadeIn>
-              <div className="text-center mb-24">
-                <h2 className="text-3xl font-extrabold text-[#0f2a4a] sm:text-4xl tracking-tight">Senjata Rahasia Kamu</h2>
-                <p className="mt-4 text-lg text-slate-500 font-medium">Biar AI yang kerja keras, kamu tinggal revisi ringan dan bimbingan.</p>
-              </div>
+            <FadeIn className="text-center mb-16">
+              <h2 className="text-3xl font-extrabold text-[#0f2a4a] sm:text-4xl tracking-tight">Pilihan Layanan Expert</h2>
+              <p className="mt-4 text-lg text-slate-500 font-medium">Bimbingan penyusunan 1-on-1 langsung dengan praktisi & akademisi handal.</p>
             </FadeIn>
 
-            {/* Fitur 1 */}
-            <div className="flex flex-col lg:flex-row items-center gap-16 mb-28">
-              <FadeIn delay={100} className="w-full lg:w-1/2">
-                <div className="aspect-square rounded-[2.5rem] bg-gradient-to-br from-green-50 to-white border border-green-100 shadow-xl flex items-center justify-center relative overflow-hidden">
-                   <div className="absolute inset-0 bg-green-500/5 backdrop-blur-3xl"></div>
-                   <div className="relative z-10 text-green-500">
-                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="w-40 h-40"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-                   </div>
-                </div>
-              </FadeIn>
-              <FadeIn delay={300} className="w-full lg:w-1/2 space-y-6">
-                <div className="inline-flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-bold text-green-700 uppercase tracking-widest">
-                  <div className="h-1.5 w-1.5 rounded-full bg-green-500"></div> Tersedia
-                </div>
-                <h3 className="text-3xl font-extrabold text-[#0f2a4a] sm:text-4xl tracking-tight">Generator Judul Anti-Pasaran</h3>
-                <p className="text-lg text-slate-500 leading-relaxed">
-                  Cukup ketik jurusan dan minatmu. Mesin AI kami telah dilatih dengan ribuan jurnal terbaru untuk menghasilkan ide judul yang akademis, logis, dan sangat spesifik. Ucapkan selamat tinggal pada penolakan Dosen Pembimbing.
-                </p>
-                <ul className="space-y-4 text-slate-700 font-medium mt-8">
-                  <li className="flex items-start gap-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-green-500 shrink-0 mt-0.5"><polyline points="20 6 9 17 4 12"/></svg>
-                    Disesuaikan dengan program studi
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-green-500 shrink-0 mt-0.5"><polyline points="20 6 9 17 4 12"/></svg>
-                    Menyertakan metode penelitian yang relevan
-                  </li>
-                </ul>
-              </FadeIn>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {packages.length > 0 ? packages.map((pkg, idx) => (
+                <FadeIn key={pkg.id} delay={idx * 200} className={`bg-white border border-slate-200 rounded-3xl p-8 shadow-sm flex flex-col justify-between hover:border-emerald-200 transition-all z-10 ${idx === 1 ? 'bg-[#0B1525] border-blue-900 shadow-xl transform lg:-translate-y-4' : ''}`}>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className={`text-xl font-bold ${idx === 1 ? 'text-white' : 'text-slate-800'}`}>{pkg.nama}</h3>
+                      {idx === 1 && <span className="bg-amber-400 text-amber-950 text-[10px] font-bold px-3 py-1 rounded-full tracking-wide uppercase">Populer</span>}
+                    </div>
+                    <div className="mt-4 mb-6">
+                       <span className={`text-3xl font-black ${idx === 1 ? 'text-white' : 'text-slate-800'}`}>{formatRp(pkg.harga)}</span>
+                    </div>
+                    <p className={`text-sm mb-6 leading-relaxed ${idx === 1 ? 'text-slate-400' : 'text-slate-500'}`}>{pkg.deskripsi}</p>
+                    <ul className="space-y-4 mb-8">
+                      {pkg.fitur?.map((f: string, i: number) => (
+                        <li key={i} className={`text-sm flex items-start gap-3 ${idx === 1 ? 'text-slate-300' : 'text-slate-700'}`}>
+                          <svg className="w-5 h-5 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <button onClick={handlePesanPublik} className={`w-full py-4 font-bold rounded-xl transition-colors ${idx === 1 ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg' : 'bg-slate-50 text-emerald-700 border border-slate-200 hover:bg-emerald-50'}`}>
+                    Pesan Sekarang
+                  </button>
+                </FadeIn>
+              )) : (
+                <div className="col-span-3 text-center text-slate-500 py-10 font-medium">Memuat katalog layanan...</div>
+              )}
             </div>
           </div>
         </section>
@@ -321,33 +321,61 @@ export default function Home() {
 
       </main>
       
-      {/* 6. FOOTER DENGAN LINK LEGAL */}
-      <footer className="border-t border-slate-200 bg-slate-50 py-12 px-6">
-        <div className="mx-auto max-w-7xl flex flex-col items-center justify-center gap-6">
+      {/* 6. FOOTER LENGKAP (STANDAR MIDTRANS) */}
+      <footer className="border-t border-slate-200 bg-slate-50 pt-16 pb-8 px-6">
+        <div className="mx-auto max-w-7xl grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
           
-          {/* Navigasi Legal */}
-          <div className="flex flex-wrap items-center justify-center gap-6 text-sm font-semibold text-slate-500">
-            <Link href="/terms-and-conditions" className="hover:text-green-600 transition-colors">
-              Syarat & Ketentuan (T&C)
+          <div className="md:col-span-2">
+            <Link href="/" className="text-2xl font-extrabold tracking-tight text-[#0f2a4a]">
+              Mau<span className="text-green-500">lulus</span>
             </Link>
-            <span className="text-slate-300">|</span>
-            <Link href="#" className="hover:text-green-600 transition-colors">
-              Kebijakan Privasi
-            </Link>
-            <span className="text-slate-300">|</span>
-            <Link href="#" className="hover:text-green-600 transition-colors">
-              Hubungi Kami
-            </Link>
+            <p className="mt-4 text-sm text-slate-500 leading-relaxed max-w-sm">
+              Platform pendamping skripsi berbasis AI pertama di Indonesia. Membantu menyusun kerangka, parafrase anti-plagiasi, dan konsultasi expert untuk memastikan Kamu lulus tepat waktu.
+            </p>
           </div>
 
-          {/* Copyright */}
-          <p className="flex items-center justify-center gap-2 text-slate-400 font-medium text-xs sm:text-sm mt-2">
+          {/* Kontak Bisnis */}
+          <div>
+            <h4 className="font-bold text-[#0f2a4a] mb-5">Hubungi Kami</h4>
+            <ul className="space-y-4 text-sm text-slate-500">
+              <li className="flex items-center gap-3">
+                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                vianeyricky@gmail.com
+              </li>
+              <li className="flex items-center gap-3">
+                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                +62 85-815-9999-53 {/* Ganti dengan nomor WhatsApp operasional yang aktif */}
+              </li>
+              <li className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                Kota Malang, Jawa Timur
+              </li>
+            </ul>
+          </div>
+
+          {/* Tautan Legal (Syarat Midtrans) */}
+          <div>
+            <h4 className="font-bold text-[#0f2a4a] mb-5">Informasi Legal</h4>
+            <ul className="space-y-4 text-sm font-medium text-slate-500 flex flex-col">
+              <Link href="/terms-and-conditions" className="hover:text-green-600 transition-colors">Syarat & Ketentuan</Link>
+              <Link href="/kebijakan-privasi" className="hover:text-green-600 transition-colors">Kebijakan Privasi</Link>
+              <Link href="/kebijakan-pengembalian" className="hover:text-green-600 transition-colors">Kebijakan Pengembalian Dana</Link>
+            </ul>
+          </div>
+
+        </div>
+
+        <div className="mx-auto max-w-7xl pt-8 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="flex items-center gap-2 text-slate-400 font-medium text-xs sm:text-sm">
             © {new Date().getFullYear()} Maululus. Dibuat dengan 
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-green-500">
               <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
             </svg>
             agar kamu cepat lulus.
           </p>
+          <div className="text-xs font-bold text-slate-300">
+            Transaksi Aman Terlindungi via Midtrans
+          </div>
         </div>
       </footer>
 

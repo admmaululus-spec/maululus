@@ -10,6 +10,7 @@ export default function ManajemenProyekPage() {
   
   // State untuk Modal Edit Proyek
   const [editModal, setEditModal] = useState<{ show: boolean, data: any }>({ show: false, data: null });
+  const [newTaskItem, setNewTaskItem] = useState('');
 
   const fetchProjects = async () => {
     setLoading(true);
@@ -31,23 +32,65 @@ export default function ManajemenProyekPage() {
   }, []);
 
   const handleOpenEdit = (project: any) => {
-    setEditModal({ show: true, data: { ...project } });
+    // Pastikan checklist ada, jika null jadikan array kosong
+    const safeProject = { ...project, checklist: project.checklist || [] };
+    setEditModal({ show: true, data: safeProject });
+  };
+
+  // Kalkulasi progress otomatis berdasarkan checklist
+  const recalculateProgress = (currentChecklist: any[]) => {
+    if (!currentChecklist || currentChecklist.length === 0) return 0;
+    const completed = currentChecklist.filter(item => item.completed).length;
+    return Math.round((completed / currentChecklist.length) * 100);
+  };
+
+  const handleAddTask = () => {
+    if (!newTaskItem.trim()) return;
+    const newChecklist = [...editModal.data.checklist, { task: newTaskItem, completed: false }];
+    const newProgress = recalculateProgress(newChecklist);
+    
+    setEditModal({
+      ...editModal,
+      data: { ...editModal.data, checklist: newChecklist, progress: newProgress }
+    });
+    setNewTaskItem('');
+  };
+
+  const handleToggleTask = (index: number) => {
+    const newChecklist = [...editModal.data.checklist];
+    newChecklist[index].completed = !newChecklist[index].completed;
+    const newProgress = recalculateProgress(newChecklist);
+    
+    setEditModal({
+      ...editModal,
+      data: { ...editModal.data, checklist: newChecklist, progress: newProgress }
+    });
+  };
+
+  const handleRemoveTask = (index: number) => {
+    const newChecklist = editModal.data.checklist.filter((_: any, i: number) => i !== index);
+    const newProgress = recalculateProgress(newChecklist);
+    
+    setEditModal({
+      ...editModal,
+      data: { ...editModal.data, checklist: newChecklist, progress: newProgress }
+    });
   };
 
   const handleSaveProject = async () => {
     try {
-      const { id, expert, progress, is_active } = editModal.data;
+      const { id, expert, progress, is_active, checklist } = editModal.data;
       
       const { error } = await supabase
         .from('premium_projects')
-        .update({ expert, progress, is_active })
+        .update({ expert, progress, is_active, checklist })
         .eq('id', id);
 
       if (error) throw error;
       
-      alert("Status proyek berhasil diperbarui!");
+      alert("Status proyek dan progres berhasil diperbarui!");
       setEditModal({ show: false, data: null });
-      fetchProjects(); // Refresh tabel
+      fetchProjects(); 
     } catch (err: any) {
       alert("Gagal menyimpan data: " + err.message);
     }
@@ -64,7 +107,7 @@ export default function ManajemenProyekPage() {
       <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-800 tracking-tight">Manajemen Proyek</h1>
-          <p className="text-slate-500 mt-1 text-sm">Pantau pesanan Expert Assistance, perbarui progres, dan tugaskan tim.</p>
+          <p className="text-slate-500 mt-1 text-sm">Pantau pesanan Expert Assistance, perbarui progres checklist, dan tugaskan tim.</p>
         </div>
         
         {/* Search Bar */}
@@ -157,13 +200,13 @@ export default function ManajemenProyekPage() {
       {/* Modal Edit Proyek */}
       {editModal.show && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <button onClick={() => setEditModal({ show: false, data: null })} className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 rounded-full font-bold transition-colors">✕</button>
             
             <h3 className="text-xl font-black text-slate-800 mb-1">Update Proyek Klien</h3>
             <p className="text-xs text-slate-500 mb-6 font-mono">Order ID: {editModal.data?.id}</p>
             
-            <div className="space-y-5">
+            <div className="space-y-6">
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Tugaskan Expert / Dosen</label>
                 <input 
@@ -175,20 +218,49 @@ export default function ManajemenProyekPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex justify-between">
-                  <span>Progress Pengerjaan</span>
-                  <span className="text-blue-600">{editModal.data?.progress || 0}%</span>
-                </label>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  step="5"
-                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" 
-                  value={editModal.data?.progress || 0} 
-                  onChange={e => setEditModal({ ...editModal, data: { ...editModal.data, progress: Number(e.target.value) } })} 
-                />
+              {/* Progress Checklist Builder */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <div className="flex justify-between items-center mb-4">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Checklist Pengerjaan</label>
+                  <span className="text-sm font-bold text-blue-600">{editModal.data?.progress || 0}% Selesai</span>
+                </div>
+
+                <div className="flex gap-2 mb-4">
+                  <input 
+                    type="text" 
+                    placeholder="Contoh: Bab 1 Pendahuluan" 
+                    value={newTaskItem}
+                    onChange={(e) => setNewTaskItem(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
+                    className="flex-1 border border-slate-200 bg-white p-2.5 rounded-xl text-xs outline-none focus:border-blue-500"
+                  />
+                  <button onClick={handleAddTask} className="bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-700">Tambah</button>
+                </div>
+
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {editModal.data?.checklist?.length === 0 ? (
+                    <p className="text-xs text-center text-slate-400 py-4 font-medium italic">Belum ada item ditambahkan.</p>
+                  ) : (
+                    editModal.data?.checklist?.map((item: any, index: number) => (
+                      <div key={index} className={`flex justify-between items-center p-3 rounded-xl border transition-colors ${item.completed ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'}`}>
+                        <label className="flex items-center gap-3 cursor-pointer flex-1">
+                          <input 
+                            type="checkbox" 
+                            checked={item.completed} 
+                            onChange={() => handleToggleTask(index)} 
+                            className="w-4 h-4 text-emerald-500 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                          />
+                          <span className={`text-sm font-semibold ${item.completed ? 'text-emerald-700 line-through decoration-emerald-300' : 'text-slate-700'}`}>
+                            {item.task}
+                          </span>
+                        </label>
+                        <button onClick={() => handleRemoveTask(index)} className="text-slate-300 hover:text-rose-500 p-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
 
               <div>
@@ -201,7 +273,6 @@ export default function ManajemenProyekPage() {
                   <option value="true">🟢 Sedang Berjalan (Aktif)</option>
                   <option value="false">🔴 Selesai / Ditutup</option>
                 </select>
-                <p className="text-[10px] text-slate-400 mt-2">Ubah menjadi Selesai jika dokumen final telah diserahkan dan revisi sudah habis.</p>
               </div>
             </div>
 

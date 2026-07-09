@@ -71,14 +71,13 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
             user_id: session.user.id,
             user_email: session.user.email,
             paket_nama: selectedPaket.nama,
-            koin_jumlah: useKoin ? -(koinTerpotong) : 0, // Catat koin yang terpotong jika ada
+            koin_jumlah: useKoin ? -(koinTerpotong) : 0, 
             harga_rp: finalPrice,
             metode: 'Midtrans Gateway',
             status: 'SUCCESS'
           });
-          // ------------------------------------
 
-          // Masukkan ke Database Proyek sebagai "Aktif"
+          // Masukkan ke Database Proyek sebagai "Aktif" dengan checklist kosong
           await supabase.from('premium_projects').insert({
             id: orderId,
             user_id: session.user.id,
@@ -91,13 +90,17 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
             universitas: form.univ,
             jurusan: form.jurusan,
             no_whatsapp: form.no_whatsapp,
-            progress: 5,
-            is_active: true
+            progress: 0,
+            is_active: true,
+            checklist: [] // Pastikan kolom ini ada di Supabase tipe JSONB
           });
 
-          alert("Pembayaran Lunas! Proyek kamu sekarang berstatus aktif.");
-          setShowModal(false);
-          window.location.reload();
+          // Redirect ke WhatsApp setelah sukses
+          const waNumber = '6285815999953'; // GANTI DENGAN NOMOR WA ADMIN
+          const waMessage = encodeURIComponent(`Halo Admin Maululus, pesanan Expert Assistance atas nama *${form.nama}* telah berhasil dibayar.\n\n*Paket:* ${selectedPaket.nama}\n*Order ID:* ${orderId}\n\nMohon segera diproses ya!`);
+          
+          alert("Pembayaran Lunas! Kamu akan diarahkan ke WhatsApp Admin.");
+          window.location.href = `https://wa.me/${waNumber}?text=${waMessage}`;
         },
         onPending: function(result: any) {
           alert("Menunggu pembayaran Anda diselesaikan!");
@@ -177,7 +180,6 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
         </div>
       </div>
 
-      {/* MODAL PEMBAYARAN MIDTRANS */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl relative grid grid-cols-1 md:grid-cols-2 gap-8 max-h-[90vh] overflow-y-auto">
