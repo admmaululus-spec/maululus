@@ -8,7 +8,6 @@ import Link from 'next/link';
 export default function ParafrasePage() {
   const router = useRouter();
   
-  // State Dinamis
   const [hargaKoin, setHargaKoin] = useState<number | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [koin, setKoin] = useState(0);
@@ -18,7 +17,6 @@ export default function ParafrasePage() {
 
   useEffect(() => {
     const initializePage = async () => {
-      // 1. Cek User & Saldo Koin
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return router.push('/auth');
       setUserId(session.user.id);
@@ -26,12 +24,11 @@ export default function ParafrasePage() {
       const { data: userData } = await supabase.from('users_data').select('koin').eq('id', session.user.id).single();
       if (userData) setKoin(userData.koin);
 
-      // 2. Ambil Harga Dinamis Khusus Parafrase dari DB Admin
       const { data: pricingData } = await supabase.from('ai_tools_pricing').select('koin').eq('id', 'parafrase').single();
       if (pricingData) {
         setHargaKoin(pricingData.koin);
       } else {
-        setHargaKoin(15); // Fallback harga default jika db error
+        setHargaKoin(15);
       }
     };
     initializePage();
@@ -40,7 +37,8 @@ export default function ParafrasePage() {
   const handleParafrase = async () => {
     if (hargaKoin === null) return;
     if (!textInput.trim()) return alert("Teks tidak boleh kosong!");
-    if (koin < hargaKoin) {
+    
+    if (Number(koin) < Number(hargaKoin)) {
       alert(`Koin tidak cukup! Kamu butuh ${hargaKoin} Koin.`);
       return router.push('/dashboard?menu=topup');
     }
@@ -48,18 +46,15 @@ export default function ParafrasePage() {
     setIsProcessing(true);
 
     try {
-      // 1. Potong koin sesuai harga DB
-      const { error } = await supabase.from('users_data').update({ koin: koin - hargaKoin }).eq('id', userId);
+      const { error } = await supabase.from('users_data').update({ koin: Number(koin) - Number(hargaKoin) }).eq('id', userId);
       if (error) throw error;
-      setKoin(prev => prev - hargaKoin);
+      setKoin(prev => Number(prev) - Number(hargaKoin));
 
-      // 2. Panggil API Parafrase (Simulasi AI)
       await new Promise(resolve => setTimeout(resolve, 3000));
       const hasilParafrase = `(Hasil Parafrase AI) ${textInput.split(' ').reverse().join(' ')}`;
       
       setTextOutput(hasilParafrase);
 
-      // 3. Simpan ke History Supabase
       if (userId) {
         await supabase.from('ai_tools_history').insert({
           user_id: userId,

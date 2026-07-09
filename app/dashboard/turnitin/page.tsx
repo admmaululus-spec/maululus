@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import Link from 'next/link';
-import { ConfirmModal } from '../components/IconsAndUI';
 
 export default function TurnitinCheckPage() {
   const router = useRouter();
@@ -16,7 +15,6 @@ export default function TurnitinCheckPage() {
   const [textInput, setTextInput] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<{ score: number, matches: string[] } | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     const initializePage = async () => {
@@ -33,28 +31,22 @@ export default function TurnitinCheckPage() {
     initializePage();
   }, [router]);
 
-  const handleScanClick = () => {
+  const handleScanClick = async () => {
     if (textInput.length < 50) return alert("Minimal masukkan 50 karakter untuk di-scan.");
     if (hargaKoin === null) return;
-    setModalOpen(true);
-  };
-
-  const confirmScan = async () => {
-    if (hargaKoin === null) return;
-    if (koin < hargaKoin) {
+    
+    if (Number(koin) < Number(hargaKoin)) {
       alert(`Koin tidak cukup! Layanan ini membutuhkan ${hargaKoin} Koin.`);
-      setModalOpen(false);
       return router.push('/dashboard?menu=topup');
     }
 
-    setModalOpen(false);
     setIsScanning(true);
     setScanResult(null);
 
     try {
-      const { error } = await supabase.from('users_data').update({ koin: koin - hargaKoin }).eq('id', userId);
+      const { error } = await supabase.from('users_data').update({ koin: Number(koin) - Number(hargaKoin) }).eq('id', userId);
       if (error) throw error;
-      setKoin(prev => prev - hargaKoin);
+      setKoin(prev => Number(prev) - Number(hargaKoin));
 
       // Simulasi delay scanning API Copyleaks
       await new Promise(resolve => setTimeout(resolve, 5000));
@@ -123,7 +115,7 @@ export default function TurnitinCheckPage() {
               onClick={handleScanClick} disabled={isScanning || textInput.length < 50}
               className="w-full mt-5 bg-rose-600 text-white font-bold py-4 rounded-xl hover:bg-rose-700 transition-all disabled:opacity-50 text-sm shadow-md shadow-rose-600/20"
             >
-              {isScanning ? 'Memproses Pemindaian...' : 'Scan Dokumen Sekarang'}
+              {isScanning ? 'Memproses Pemindaian...' : `Scan Dokumen Sekarang (-${hargaKoin} Koin)`}
             </button>
           </div>
 
@@ -153,14 +145,6 @@ export default function TurnitinCheckPage() {
           </div>
         </div>
       </main>
-
-      <ConfirmModal 
-        isOpen={modalOpen} 
-        title="Konfirmasi Check Turnitin" 
-        desc={`Pemindaian global ini membutuhkan ${hargaKoin} koin. Lanjutkan?`}
-        onConfirm={confirmScan} 
-        onCancel={() => setModalOpen(false)} 
-      />
     </div>
   );
 }

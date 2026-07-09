@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import Link from 'next/link';
-import { ConfirmModal } from '../components/IconsAndUI';
 
 export default function RingkasanJurnalPage() {
   const router = useRouter();
@@ -16,7 +15,6 @@ export default function RingkasanJurnalPage() {
   const [textInput, setTextInput] = useState('');
   const [textOutput, setTextOutput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     const initializePage = async () => {
@@ -33,27 +31,21 @@ export default function RingkasanJurnalPage() {
     initializePage();
   }, [router]);
 
-  const handleRingkasanClick = () => {
+  const handleRingkasanClick = async () => {
     if (!textInput.trim()) return alert("Teks tidak boleh kosong!");
     if (hargaKoin === null) return;
-    setModalOpen(true);
-  };
-
-  const confirmRingkasan = async () => {
-    if (hargaKoin === null) return;
-    if (koin < hargaKoin) {
+    
+    if (Number(koin) < Number(hargaKoin)) {
       alert(`Koin tidak cukup! Kamu butuh ${hargaKoin} Koin.`);
-      setModalOpen(false);
       return router.push('/dashboard?menu=topup');
     }
 
-    setModalOpen(false);
     setIsProcessing(true);
 
     try {
-      const { error } = await supabase.from('users_data').update({ koin: koin - hargaKoin }).eq('id', userId);
+      const { error } = await supabase.from('users_data').update({ koin: Number(koin) - Number(hargaKoin) }).eq('id', userId);
       if (error) throw error;
-      setKoin(prev => prev - hargaKoin);
+      setKoin(prev => Number(prev) - Number(hargaKoin));
 
       const res = await fetch('/api/ringkasan', {
         method: 'POST',
@@ -153,14 +145,6 @@ export default function RingkasanJurnalPage() {
           </div>
         </div>
       </main>
-
-      <ConfirmModal 
-        isOpen={modalOpen} 
-        title="Ringkas Jurnal" 
-        desc={`Fitur ini akan memotong ${hargaKoin} koin dari saldo Anda. Ekstrak data jurnal sekarang?`}
-        onConfirm={confirmRingkasan} 
-        onCancel={() => setModalOpen(false)} 
-      />
     </div>
   );
 }

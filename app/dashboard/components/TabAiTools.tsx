@@ -2,13 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
-import { SparklesIcon, ToolItem, TargetIcon, PencilIcon, RefreshIcon, SummarizeIcon, MagnifyIcon, CitationIcon, ShieldCheckIcon, ConfirmModal } from './IconsAndUI';
+import { SparklesIcon, ToolItem, TargetIcon, PencilIcon, RefreshIcon, SummarizeIcon, MagnifyIcon, CitationIcon, ShieldCheckIcon } from './IconsAndUI';
 
 export default function TabAiTools({ koin, userId }: any) {
   const router = useRouter();
   const [tools, setTools] = useState<any[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedTool, setSelectedTool] = useState<any>(null);
 
   useEffect(() => {
     const fetchTools = async () => {
@@ -32,23 +30,18 @@ export default function TabAiTools({ koin, userId }: any) {
   };
 
   const handleToolClick = (tool: any) => {
-    if (tool.koin === 0) {
+    if (Number(tool.koin) === 0) {
       router.push(`/${tool.id === 'generator' ? 'generator' : 'dashboard/' + tool.id}`);
       return;
     }
-    setSelectedTool(tool);
-    setModalOpen(true);
-  };
-
-  const confirmDeduction = async () => {
-    if (koin < selectedTool.koin) {
-      alert(`Koin kamu tidak cukup. Butuh ${selectedTool.koin} Koin.`);
-      setModalOpen(false);
+    
+    if (Number(koin) < Number(tool.koin)) {
+      alert(`Koin kamu tidak cukup. Butuh ${tool.koin} Koin untuk mengakses ${tool.nama}.`);
       return;
     }
-    // Jika setuju, catat navigasi atau potong koin (tergantung alurmu, biasanya dipotong saat di dalam tool. Jika ingin dipotong di sini, lakukan update Supabase).
-    setModalOpen(false);
-    router.push(`/${selectedTool.id === 'generator' ? 'generator' : 'dashboard/' + selectedTool.id}`);
+    
+    // Jika cukup, langsung arahkan (karena pemotongan koin sesungguhnya ada saat aksi di dalam page tool)
+    router.push(`/${tool.id === 'generator' ? 'generator' : 'dashboard/' + tool.id}`);
   };
 
   return (
@@ -68,18 +61,10 @@ export default function TabAiTools({ koin, userId }: any) {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {tools.map(tool => (
-            <ToolItem key={tool.id} icon={getIcon(tool.id)} label={tool.nama} coin={tool.koin} tooltip={tool.tooltip} isHot={tool.is_hot} isFree={tool.koin === 0} onClick={() => handleToolClick(tool)} />
+            <ToolItem key={tool.id} icon={getIcon(tool.id)} label={tool.nama} coin={tool.koin} tooltip={tool.tooltip} isHot={tool.is_hot} isFree={Number(tool.koin) === 0} onClick={() => handleToolClick(tool)} />
           ))}
         </div>
       </div>
-
-      <ConfirmModal 
-        isOpen={modalOpen} 
-        title="Akses Fitur AI" 
-        desc={`Apakah kamu setuju menggunakan ${selectedTool?.koin} koin untuk mengakses fitur ${selectedTool?.nama}?`}
-        onConfirm={confirmDeduction} 
-        onCancel={() => setModalOpen(false)} 
-      />
     </div>
   );
 }

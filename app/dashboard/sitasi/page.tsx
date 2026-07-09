@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import Link from 'next/link';
-import { ConfirmModal } from '../components/IconsAndUI';
 
 export default function SitasiPage() {
   const router = useRouter();
@@ -17,7 +16,6 @@ export default function SitasiPage() {
   const [format, setFormat] = useState('APA 7th Edition');
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<{ in_text_citation: string, bibliography: string, style_used: string } | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     const initializePage = async () => {
@@ -34,28 +32,22 @@ export default function SitasiPage() {
     initializePage();
   }, [router]);
 
-  const handleGenerateClick = () => {
+  const handleGenerateClick = async () => {
     if (!inputData.trim()) return alert("Tuliskan judul jurnal atau link terlebih dahulu!");
     if (hargaKoin === null) return;
-    setModalOpen(true);
-  };
-
-  const confirmGenerate = async () => {
-    if (hargaKoin === null) return;
-    if (koin < hargaKoin) {
+    
+    if (Number(koin) < Number(hargaKoin)) {
       alert(`Koin tidak cukup! Kamu butuh ${hargaKoin} Koin.`);
-      setModalOpen(false);
       return router.push('/dashboard?menu=topup');
     }
 
-    setModalOpen(false);
     setIsProcessing(true);
     setResult(null);
 
     try {
-      const { error } = await supabase.from('users_data').update({ koin: koin - hargaKoin }).eq('id', userId);
+      const { error } = await supabase.from('users_data').update({ koin: Number(koin) - Number(hargaKoin) }).eq('id', userId);
       if (error) throw error;
-      setKoin(prev => prev - hargaKoin);
+      setKoin(prev => Number(prev) - Number(hargaKoin));
 
       const res = await fetch('/api/sitasi', {
         method: 'POST',
@@ -171,14 +163,6 @@ export default function SitasiPage() {
           </div>
         </div>
       </main>
-
-      <ConfirmModal 
-        isOpen={modalOpen} 
-        title="Buat Sitasi Pustaka" 
-        desc={`Fitur ini akan memotong ${hargaKoin} koin dari saldo Anda. Lanjutkan proses?`}
-        onConfirm={confirmGenerate} 
-        onCancel={() => setModalOpen(false)} 
-      />
     </div>
   );
 }

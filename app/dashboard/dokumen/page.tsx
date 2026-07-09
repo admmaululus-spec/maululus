@@ -4,7 +4,6 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import Link from 'next/link';
-import { ConfirmModal } from '../components/IconsAndUI';
 
 type SubBab = { judul: string; deskripsi: string; url_asli?: string };
 type OutlineData = { bab: string; subBab: SubBab[] };
@@ -28,8 +27,6 @@ function DokumenContent() {
   const [activeSub, setActiveSub] = useState<{judul: string, deskripsi: string} | null>(null);
   const [copilotResult, setCopilotResult] = useState('');
   const [isProcessingAI, setIsProcessingAI] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<'paraphrase' | 'expand' | 'formalize' | null>(null);
 
   useEffect(() => {
     if (!idSkripsi) return router.push('/dashboard');
@@ -59,33 +56,26 @@ function DokumenContent() {
     fetchDokumen();
   }, [idSkripsi, router]);
 
-  const handleAIClick = (action: 'paraphrase' | 'expand' | 'formalize') => {
+  const handleAIClick = async (action: 'paraphrase' | 'expand' | 'formalize') => {
     if (!activeSub || hargaKoin === null) return;
-    setPendingAction(action);
-    setModalOpen(true);
-  };
-
-  const confirmAICall = async () => {
-    if (!pendingAction || hargaKoin === null || !activeSub) return;
-    if (koin < hargaKoin) {
+    
+    if (Number(koin) < Number(hargaKoin)) {
       alert(`Koin tidak cukup! Butuh ${hargaKoin} Koin.`);
-      setModalOpen(false);
       return router.push('/dashboard?menu=topup');
     }
 
-    setModalOpen(false);
     setIsProcessingAI(true);
     setCopilotResult('');
     
     try {
-      const { error } = await supabase.from('users_data').update({ koin: koin - hargaKoin }).eq('id', userId);
+      const { error } = await supabase.from('users_data').update({ koin: Number(koin) - Number(hargaKoin) }).eq('id', userId);
       if (error) throw error;
-      setKoin(prev => prev - hargaKoin);
+      setKoin(prev => Number(prev) - Number(hargaKoin));
 
       const res = await fetch('/api/copilot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: activeSub.deskripsi, action: pendingAction, judulSkripsi: judulTarget, namaBab: activeSub.judul })
+        body: JSON.stringify({ text: activeSub.deskripsi, action: action, judulSkripsi: judulTarget, namaBab: activeSub.judul })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -107,7 +97,6 @@ function DokumenContent() {
     }
   };
 
-  // ... (Sisa fungsi Download PDF/Word dan handler Copy dibiarkan sama seperti kodemu, tidak perlu diubah. Cukup tempel di sini)
   const handleCopy = () => {
     let textToCopy = `JUDUL SKRIPSI:\n${judulTarget}\n\n`;
     outline.forEach(item => {
@@ -218,15 +207,6 @@ function DokumenContent() {
           </div>
         </div>
       )}
-
-      {/* MODAL KONFIRMASI POTONG KOIN */}
-      <ConfirmModal 
-        isOpen={modalOpen} 
-        title="Gunakan AI Copilot" 
-        desc={`Apakah Anda setuju memotong ${hargaKoin} koin untuk mengembangkan bagian ini?`}
-        onConfirm={confirmAICall} 
-        onCancel={() => setModalOpen(false)} 
-      />
     </div>
   );
 }

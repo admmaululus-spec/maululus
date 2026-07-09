@@ -7,8 +7,9 @@ import Link from 'next/link';
 
 export default function CariJurnalPage() {
   const router = useRouter();
-  const HARGA_KOIN = 5;
 
+  // Gunakan state untuk harga koin dinamis dari DB
+  const [hargaKoin, setHargaKoin] = useState<number | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [koin, setKoin] = useState(0);
   const [query, setQuery] = useState('');
@@ -16,52 +17,76 @@ export default function CariJurnalPage() {
   const [results, setResults] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const initializePage = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return router.push('/auth');
       setUserId(session.user.id);
 
-      const { data } = await supabase.from('users_data').select('koin').eq('id', session.user.id).single();
-      if (data) setKoin(data.koin);
+      // Fetch koin user
+      const { data: userData } = await supabase.from('users_data').select('koin').eq('id', session.user.id).single();
+      if (userData) setKoin(userData.koin);
+
+      // Fetch harga tool dari DB agar dinamis
+      const { data: priceData } = await supabase.from('ai_tools_pricing').select('koin').eq('id', 'cari-jurnal').single();
+      setHargaKoin(priceData ? priceData.koin : 5); // Fallback ke 5 jika db kosong
     };
-    fetchUser();
+    initializePage();
   }, [router]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
+    if (hargaKoin === null) return;
     
-    if (koin < HARGA_KOIN) {
-      alert(`Koin tidak cukup! Kamu butuh ${HARGA_KOIN} Koin untuk mencari jurnal.`);
-      return router.push('/dashboard/upgrade');
+    // Perbaikan: Konversi ke Number() untuk perbandingan yang mutlak aman
+    if (Number(koin) < Number(hargaKoin)) {
+      alert(`Koin tidak cukup! Kamu butuh ${hargaKoin} Koin untuk mencari jurnal.`);
+      return router.push('/dashboard?menu=topup'); // Arahkan ke topup
     }
 
     setIsSearching(true);
 
     try {
       // 1. Potong koin
-      const { error } = await supabase.from('users_data').update({ koin: koin - HARGA_KOIN }).eq('id', userId);
+      const { error } = await supabase.from('users_data').update({ koin: Number(koin) - Number(hargaKoin) }).eq('id', userId);
       if (error) throw error;
-      setKoin(prev => prev - HARGA_KOIN);
+      setKoin(prev => Number(prev) - Number(hargaKoin));
 
-      // 2. TODO: Ganti dengan Fetch API ke endpoint Google Scholar AI milikmu
-   // Ganti blok Promise setTimeout dengan ini:
-const res = await fetch('/api/cari-jurnal', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: query })
-  });
-  
-  if (!res.ok) throw new Error("Gagal mencari jurnal");
-  const data = await res.json();
-  setResults(data.results);
+      // 2. Fetch API ke endpoint Google Scholar AI
+      const res = await fetch('/api/cari-jurnal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query })
+      });
+      
+      if (!res.ok) throw new Error("Gagal mencari jurnal");
+      const data = await res.json();
+      setResults(data.results);
+
+      // 3. Simpan aktivitas ke history
+      if (userId) {
+        await supabase.from('ai_tools_history').insert({
+          user_id: userId,
+          tool_name: 'Cari Jurnal',
+          input_data: query,
+          result_data: { results: data.results }
+        });
+      }
     
     } catch (err) {
-      alert("Gagal memproses AI. Koin tidak terpotong (Rollback otomatis).");
+      alert("Gagal memproses AI. Koin dikembalikan otomatis.");
+      // Rollback koin jika API gagal
+      if (userId) {
+        await supabase.from('users_data').update({ koin: koin }).eq('id', userId);
+        setKoin(koin);
+      }
     } finally {
       setIsSearching(false);
     }
   };
+
+  // Loading state ketika hargaKoin dari DB belum termuat
+  if (hargaKoin === null) return <div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div></div>;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
@@ -100,7 +125,7 @@ const res = await fetch('/api/cari-jurnal', {
               disabled={isSearching}
               className="bg-blue-600 text-white font-bold py-4 px-8 rounded-2xl hover:bg-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-70 shrink-0"
             >
-              {isSearching ? 'Mencari...' : `Cari (-${HARGA_KOIN} Koin)`}
+              {isSearching ? 'Mencari...' : `Cari (-${hargaKoin} Koin)`}
             </button>
           </form>
 
@@ -122,7 +147,7 @@ const res = await fetch('/api/cari-jurnal', {
                         <p className="text-xs text-green-700 font-semibold mt-1">{res.penulis} - {res.tahun}</p>
                         <p className="text-xs text-slate-500 mt-1">{res.sumber}</p>
                       </div>
-                      <a href={res.link} className="bg-white border border-slate-200 text-xs font-bold px-4 py-2 rounded-xl text-slate-700 hover:bg-slate-100 shrink-0">Sitasi</a>
+                      <a href={res.link} target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-200 text-xs font-bold px-4 py-2 rounded-xl text-slate-700 hover:bg-slate-100 shrink-0">Sitasi</a>
                     </div>
                   </div>
                 ))}

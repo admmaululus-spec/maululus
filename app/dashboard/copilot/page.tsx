@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import Link from 'next/link';
-import { ConfirmModal } from '../components/IconsAndUI';
 
 const ActionTooltip = ({ text, children }: { text: string; children: React.ReactNode }) => (
   <div className="group relative flex-1">
@@ -29,9 +28,6 @@ export default function CopilotPage() {
   const [outputText, setOutputText] = useState('');
   const [isLoadingAI, setIsLoadingAI] = useState(false);
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<'paraphrase' | 'expand' | 'formalize' | null>(null);
-
   useEffect(() => {
     const initializePage = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -47,36 +43,28 @@ export default function CopilotPage() {
     initializePage();
   }, [router]);
 
-  const handleProcessClick = (action: 'paraphrase' | 'expand' | 'formalize') => {
+  const handleProcessClick = async (action: 'paraphrase' | 'expand' | 'formalize') => {
     if (!inputText.trim()) return alert('Input teks kosong!');
     if (hargaKoin === null) return;
     
-    setPendingAction(action);
-    setModalOpen(true);
-  };
-
-  const confirmProcess = async () => {
-    if (!pendingAction || hargaKoin === null) return;
-    if (koin < hargaKoin) {
+    if (Number(koin) < Number(hargaKoin)) {
       alert(`Koin tidak cukup! Butuh ${hargaKoin} Koin.`);
-      setModalOpen(false);
       return router.push('/dashboard?menu=topup');
     }
 
-    setModalOpen(false);
     setIsLoadingAI(true);
     
     try {
-      const { error } = await supabase.from('users_data').update({ koin: koin - hargaKoin }).eq('id', userId);
+      const { error } = await supabase.from('users_data').update({ koin: Number(koin) - Number(hargaKoin) }).eq('id', userId);
       if (error) throw error;
-      setKoin(prev => prev - hargaKoin);
+      setKoin(prev => Number(prev) - Number(hargaKoin));
 
       const response = await fetch('/api/copilot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           text: inputText, 
-          action: pendingAction,
+          action: action,
           judulSkripsi: judulSkripsi.trim() || 'Tidak disebutkan',
           namaBab: namaBab.trim() || 'Bagian acak'
         }),
@@ -169,14 +157,6 @@ export default function CopilotPage() {
 
         </div>
       </main>
-
-      <ConfirmModal 
-        isOpen={modalOpen} 
-        title="Konfirmasi Penggunaan Koin" 
-        desc={`Tindakan ini akan menggunakan ${hargaKoin} koin. Lanjutkan memproses draf?`}
-        onConfirm={confirmProcess} 
-        onCancel={() => setModalOpen(false)} 
-      />
     </div>
   );
 }
