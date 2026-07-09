@@ -236,8 +236,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 3. LAYANAN & HARGA (KHUSUS REVIEW MIDTRANS) */}
-        <section id="layanan" className="py-24 bg-white scroll-mt-20">
+       {/* 3. LAYANAN & HARGA (KHUSUS REVIEW MIDTRANS) */}
+       <section id="layanan" className="py-24 bg-white scroll-mt-20">
           <div className="mx-auto max-w-7xl px-6">
             <FadeIn className="text-center mb-16">
               <h2 className="text-3xl font-extrabold text-[#0f2a4a] sm:text-4xl tracking-tight">Pilihan Layanan Expert</h2>
@@ -246,7 +246,15 @@ export default function Home() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
               {packages.length > 0 ? packages.map((pkg, idx) => (
-                <FadeIn key={pkg.id} delay={idx * 200} className={`bg-white border border-slate-200 rounded-3xl p-8 shadow-sm flex flex-col justify-between hover:border-emerald-200 transition-all z-10 ${idx === 1 ? 'bg-[#0B1525] border-blue-900 shadow-xl transform lg:-translate-y-4' : ''}`}>
+                <FadeIn 
+                  key={pkg.id} 
+                  delay={idx * 200}
+                  className={`rounded-3xl p-8 flex flex-col justify-between transition-all z-10 ${
+                    idx === 1 
+                      ? 'bg-[#0B1525] border border-blue-900 shadow-2xl transform lg:-translate-y-4' 
+                      : 'bg-white border border-slate-200 shadow-sm hover:border-emerald-200'
+                  }`}
+                >
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <h3 className={`text-xl font-bold ${idx === 1 ? 'text-white' : 'text-slate-800'}`}>{pkg.nama}</h3>
@@ -255,9 +263,10 @@ export default function Home() {
                     <div className="mt-4 mb-6">
                        <span className={`text-3xl font-black ${idx === 1 ? 'text-white' : 'text-slate-800'}`}>{formatRp(pkg.harga)}</span>
                     </div>
-                    <p className={`text-sm mb-6 leading-relaxed ${idx === 1 ? 'text-slate-400' : 'text-slate-500'}`}>{pkg.deskripsi}</p>
+                    <p className={`text-sm mb-6 leading-relaxed ${idx === 1 ? 'text-slate-300' : 'text-slate-500'}`}>{pkg.deskripsi}</p>
+                    
                     <ul className="space-y-4 mb-8">
-                      {pkg.fitur?.map((f: string, i: number) => (
+                      {pkg.fitur && pkg.fitur.map((f: string, i: number) => (
                         <li key={i} className={`text-sm flex items-start gap-3 ${idx === 1 ? 'text-slate-300' : 'text-slate-700'}`}>
                           <svg className="w-5 h-5 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>
                           {f}
@@ -340,7 +349,7 @@ export default function Home() {
             <ul className="space-y-4 text-sm text-slate-500">
               <li className="flex items-center gap-3">
                 <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                vianeyricky@gmail.com
+                support@maululus.com
               </li>
               <li className="flex items-center gap-3">
                 <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
