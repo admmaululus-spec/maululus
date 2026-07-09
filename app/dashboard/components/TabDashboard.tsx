@@ -8,6 +8,7 @@ import {
 
 export default function TabDashboard({ riwayatList, activeProject, router, handleBukaKunci, isProcessing, setActiveMenu, koin }: any) {
   const [tools, setTools] = useState<any[]>([]);
+  const [isDeducting, setIsDeducting] = useState(false); // Mencegah double click
 
   useEffect(() => {
     const fetchToolsPreview = async () => {
@@ -22,23 +23,48 @@ export default function TabDashboard({ riwayatList, activeProject, router, handl
     return tools.find(t => t.id === id) || { id, nama: '', koin: 0, tooltip: '', is_hot: false };
   };
 
-  const handleToolClick = (toolId: string) => {
+  const handleToolClick = async (toolId: string) => {
+    if (isDeducting) return; // Cegah klik berkali-kali
+    
     const tool = getToolData(toolId);
     
-    // Jika gratis (koin = 0), langsung arahkan
+    // Jika gratis, langsung masuk
     if (Number(tool.koin) === 0) {
       router.push(toolId === 'generator' ? '/generator' : `/dashboard/${toolId}`);
       return;
     }
     
-    // Validasi ketat menggunakan Number() sebelum membuka tool
+    // Validasi saldo
     if (Number(koin) < Number(tool.koin)) {
       alert(`Koin kamu tidak cukup. Butuh ${tool.koin} Koin untuk mengakses ${tool.nama || 'alat ini'}.`);
       return;
     }
     
-    // Jika koin cukup, arahkan ke halaman tool
-    router.push(`/dashboard/${toolId}`);
+    setIsDeducting(true);
+    try {
+      // 1. Ambil ID User
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        alert("Sesi tidak valid. Silakan login ulang.");
+        return;
+      }
+
+      // 2. Eksekusi Potong Koin ke Supabase
+      const { error } = await supabase
+        .from('users_data')
+        .update({ koin: Number(koin) - Number(tool.koin) })
+        .eq('id', session.user.id);
+
+      if (error) throw error;
+
+      // 3. Lanjutkan Navigasi jika berhasil
+      router.push(`/dashboard/${toolId}`);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memotong koin karena gangguan sistem. Silakan coba lagi.");
+    } finally {
+      setIsDeducting(false);
+    }
   };
 
   return (
@@ -71,7 +97,9 @@ export default function TabDashboard({ riwayatList, activeProject, router, handl
           
           <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex gap-3 items-start mt-4">
             <span className="text-blue-500">ℹ️</span>
-            <p className="text-[10px] text-slate-600 leading-relaxed">Arahkan kursor ke icon tool untuk melihat fungsi spesifiknya. Pastikan saldo koin cukup sebelum menggunakan AI.</p>
+            <p className="text-[10px] text-slate-600 leading-relaxed">
+              {isDeducting ? 'Memproses koin... Mohon tunggu.' : 'Arahkan kursor ke icon tool untuk melihat fungsi spesifiknya. Pastikan saldo koin cukup sebelum menggunakan AI.'}
+            </p>
           </div>
         </div>
 
