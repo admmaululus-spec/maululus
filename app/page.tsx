@@ -353,7 +353,7 @@ export default function Home() {
             </ul>
           </div>
 
-          {/* Tautan Legal (Syarat Midtrans) */}
+          {/* Tautan Legal*/}
           <div>
             <h4 className="font-bold text-[#0f2a4a] mb-5">Informasi Legal</h4>
             <ul className="space-y-4 text-sm font-medium text-slate-500 flex flex-col">

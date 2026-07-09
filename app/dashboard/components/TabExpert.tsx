@@ -95,7 +95,7 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
             checklist: [] // Pastikan kolom ini ada di Supabase tipe JSONB
           });
 
-          // Redirect ke WhatsApp setelah sukses
+          // Redirect ke WhatsApp
           const waNumber = '6285815999953'; // GANTI DENGAN NOMOR WA ADMIN
           const waMessage = encodeURIComponent(`Halo Admin Maululus, pesanan Expert Assistance atas nama *${form.nama}* telah berhasil dibayar.\n\n*Paket:* ${selectedPaket.nama}\n*Order ID:* ${orderId}\n\nMohon segera diproses ya!`);
           
