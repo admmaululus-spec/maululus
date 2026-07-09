@@ -7,6 +7,7 @@ import { SparklesIcon, ToolItem, TargetIcon, PencilIcon, RefreshIcon, SummarizeI
 export default function TabAiTools({ koin, userId }: any) {
   const router = useRouter();
   const [tools, setTools] = useState<any[]>([]);
+  const [isDeducting, setIsDeducting] = useState(false);
 
   useEffect(() => {
     const fetchTools = async () => {
@@ -29,19 +30,39 @@ export default function TabAiTools({ koin, userId }: any) {
     }
   };
 
-  const handleToolClick = (tool: any) => {
+  const handleToolClick = async (tool: any) => {
+    if (isDeducting) return;
+    
+    // Jika gratis, langsung masuk
     if (Number(tool.koin) === 0) {
       router.push(`/${tool.id === 'generator' ? 'generator' : 'dashboard/' + tool.id}`);
       return;
     }
     
+    // Validasi saldo koin
     if (Number(koin) < Number(tool.koin)) {
       alert(`Koin kamu tidak cukup. Butuh ${tool.koin} Koin untuk mengakses ${tool.nama}.`);
       return;
     }
     
-    // Jika cukup, langsung arahkan (karena pemotongan koin sesungguhnya ada saat aksi di dalam page tool)
-    router.push(`/${tool.id === 'generator' ? 'generator' : 'dashboard/' + tool.id}`);
+    setIsDeducting(true);
+    try {
+      // Potong koin
+      const { error } = await supabase
+        .from('users_data')
+        .update({ koin: Number(koin) - Number(tool.koin) })
+        .eq('id', userId);
+        
+      if (error) throw error;
+      
+      // Lanjut halaman jika sukses
+      router.push(`/${tool.id === 'generator' ? 'generator' : 'dashboard/' + tool.id}`);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memotong koin karena gangguan sistem. Silakan coba lagi.");
+    } finally {
+      setIsDeducting(false);
+    }
   };
 
   return (
@@ -59,7 +80,12 @@ export default function TabAiTools({ koin, userId }: any) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 relative">
+          {isDeducting && (
+             <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center z-10 rounded-2xl">
+                <div className="px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-lg shadow-xl animate-pulse">Memproses Koin...</div>
+             </div>
+          )}
           {tools.map(tool => (
             <ToolItem key={tool.id} icon={getIcon(tool.id)} label={tool.nama} coin={tool.koin} tooltip={tool.tooltip} isHot={tool.is_hot} isFree={Number(tool.koin) === 0} onClick={() => handleToolClick(tool)} />
           ))}
