@@ -3,13 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { 
   SparklesIcon, AcademicCapIcon, ToolItem, PackageItem, FeatureIcon, TargetIcon, PencilIcon, RefreshIcon, FolderIcon, DocumentIcon,
-  PresentationIcon, UserTieIcon, ChartLineIcon, ChatBubbleIcon, ConfirmModal 
+  PresentationIcon, UserTieIcon, ChartLineIcon, ChatBubbleIcon 
 } from './IconsAndUI';
 
 export default function TabDashboard({ riwayatList, activeProject, router, handleBukaKunci, isProcessing, setActiveMenu, koin }: any) {
   const [tools, setTools] = useState<any[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedTool, setSelectedTool] = useState<any>(null);
 
   useEffect(() => {
     const fetchToolsPreview = async () => {
@@ -26,22 +24,21 @@ export default function TabDashboard({ riwayatList, activeProject, router, handl
 
   const handleToolClick = (toolId: string) => {
     const tool = getToolData(toolId);
-    if (tool.koin === 0) {
+    
+    // Jika gratis (koin = 0), langsung arahkan
+    if (Number(tool.koin) === 0) {
       router.push(toolId === 'generator' ? '/generator' : `/dashboard/${toolId}`);
       return;
     }
-    setSelectedTool(tool);
-    setModalOpen(true);
-  };
-
-  const confirmDeduction = async () => {
-    if (koin < selectedTool.koin) {
-      alert(`Koin kamu tidak cukup. Butuh ${selectedTool.koin} Koin.`);
-      setModalOpen(false);
+    
+    // Validasi ketat menggunakan Number() sebelum membuka tool
+    if (Number(koin) < Number(tool.koin)) {
+      alert(`Koin kamu tidak cukup. Butuh ${tool.koin} Koin untuk mengakses ${tool.nama || 'alat ini'}.`);
       return;
     }
-    setModalOpen(false);
-    router.push(`/dashboard/${selectedTool.id}`);
+    
+    // Jika koin cukup, arahkan ke halaman tool
+    router.push(`/dashboard/${toolId}`);
   };
 
   return (
@@ -60,15 +57,15 @@ export default function TabDashboard({ riwayatList, activeProject, router, handl
           <div className="grid grid-cols-3 gap-4 mb-4">
             <ToolItem 
               icon={<TargetIcon />} label={getToolData('generator').nama || 'Buat Judul'} coin={getToolData('generator').koin} 
-              isFree={true} tooltip={getToolData('generator').tooltip} onClick={() => handleToolClick('generator')} 
+              isFree={Number(getToolData('generator').koin) === 0} tooltip={getToolData('generator').tooltip} onClick={() => handleToolClick('generator')} 
             />
             <ToolItem 
               icon={<PencilIcon />} label={getToolData('copilot').nama || 'AI Draft Writer'} coin={getToolData('copilot').koin} 
-              isHot={getToolData('copilot').is_hot} tooltip={getToolData('copilot').tooltip} onClick={() => handleToolClick('copilot')} 
+              isFree={Number(getToolData('copilot').koin) === 0} isHot={getToolData('copilot').is_hot} tooltip={getToolData('copilot').tooltip} onClick={() => handleToolClick('copilot')} 
             />
             <ToolItem 
               icon={<RefreshIcon />} label={getToolData('parafrase').nama || 'Parafrase'} coin={getToolData('parafrase').koin} 
-              tooltip={getToolData('parafrase').tooltip} onClick={() => handleToolClick('parafrase')} 
+              isFree={Number(getToolData('parafrase').koin) === 0} tooltip={getToolData('parafrase').tooltip} onClick={() => handleToolClick('parafrase')} 
             />
           </div>
           
@@ -170,14 +167,6 @@ export default function TabDashboard({ riwayatList, activeProject, router, handl
            )}
          </div>
       </div>
-
-      <ConfirmModal 
-        isOpen={modalOpen} 
-        title="Konfirmasi Penggunaan Koin" 
-        desc={`Apakah kamu yakin ingin menggunakan ${selectedTool?.koin} koin untuk mengakses layanan ${selectedTool?.nama}? Koin akan dipotong secara otomatis.`}
-        onConfirm={confirmDeduction} 
-        onCancel={() => setModalOpen(false)} 
-      />
     </div>
   );
 }
