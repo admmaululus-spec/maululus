@@ -12,6 +12,9 @@ export default function ManajemenProyekPage() {
   const [editModal, setEditModal] = useState<{ show: boolean, data: any }>({ show: false, data: null });
   const [newTaskItem, setNewTaskItem] = useState('');
 
+  // Template cepat untuk Admin
+  const PREDEFINED_TASKS = ['Bab 1 Pendahuluan', 'Bab 2 Tinjauan Pustaka', 'Bab 3 Metodologi', 'Bab 4 Hasil & Pembahasan', 'Bab 5 Kesimpulan', 'Olah Data', 'Revisi & Finalisasi'];
+
   const fetchProjects = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -44,9 +47,9 @@ export default function ManajemenProyekPage() {
     return Math.round((completed / currentChecklist.length) * 100);
   };
 
-  const handleAddTask = () => {
-    if (!newTaskItem.trim()) return;
-    const newChecklist = [...editModal.data.checklist, { task: newTaskItem, completed: false }];
+  const handleAddTask = (taskName: string = newTaskItem) => {
+    if (!taskName.trim()) return;
+    const newChecklist = [...editModal.data.checklist, { task: taskName, completed: false }];
     const newProgress = recalculateProgress(newChecklist);
     
     setEditModal({
@@ -151,8 +154,8 @@ export default function ManajemenProyekPage() {
                         {project.paket}
                       </span>
                       {project.no_whatsapp && (
-                        <a href={`https://wa.me/${project.no_whatsapp}?text=Halo%20${project.nama_lengkap},%20saya%20dari%20Admin%20Maululus.%20Terkait%20pesanan%20Expert%20Assistance%20Anda...`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-[11px] font-bold text-green-600 hover:text-green-700 w-fit">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5"><path fillRule="evenodd" d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z" clipRule="evenodd" /></svg>
+                        <a href={`https://wa.me/${project.no_whatsapp}?text=Halo%20${project.nama_lengkap},%20saya%20dari%20Admin%20Maululus.%20Terkait%20pesanan%20Expert%20Assistance%20Anda...`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-[11px] font-bold text-green-600 hover:text-green-700 w-fit mt-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z" clipRule="evenodd" /></svg>
                           Chat WA Klien
                         </a>
                       )}
@@ -166,17 +169,17 @@ export default function ManajemenProyekPage() {
                         <p className="text-xs text-slate-700 font-medium line-clamp-3" title={project.judul}>{project.judul || 'Belum ada judul'}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 align-top">
+                    <td className="px-6 py-4 align-top w-48">
                       <div className="mb-3">
                         <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest rounded-md border ${project.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                          {project.is_active ? 'Status: Aktif' : 'Status: Selesai'}
+                          {project.is_active ? '🟢 Aktif' : '🔴 Selesai'}
                         </span>
                       </div>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Expert Bertugas:</p>
                       <p className="text-xs font-semibold text-indigo-600 mb-3">{project.expert || 'Belum di-assign'}</p>
                       
-                      <div className="w-full bg-slate-100 rounded-full h-2 mb-1">
-                        <div className={`h-2 rounded-full transition-all ${project.progress === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${project.progress || 0}%` }}></div>
+                      <div className="w-full bg-slate-200 rounded-full h-2 mb-1 overflow-hidden">
+                        <div className={`h-2 rounded-full transition-all ${project.progress === 100 ? 'bg-emerald-500' : 'bg-blue-600'}`} style={{ width: `${project.progress || 0}%` }}></div>
                       </div>
                       <p className="text-[10px] font-bold text-slate-500 text-right">{project.progress || 0}%</p>
                     </td>
@@ -200,13 +203,13 @@ export default function ManajemenProyekPage() {
       {/* Modal Edit Proyek */}
       {editModal.show && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
             <button onClick={() => setEditModal({ show: false, data: null })} className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 rounded-full font-bold transition-colors">✕</button>
             
-            <h3 className="text-xl font-black text-slate-800 mb-1">Update Proyek Klien</h3>
+            <h3 className="text-xl font-black text-slate-800 mb-1">Update Progress Proyek</h3>
             <p className="text-xs text-slate-500 mb-6 font-mono">Order ID: {editModal.data?.id}</p>
             
-            <div className="space-y-6">
+            <div className="space-y-6 overflow-y-auto pr-2 custom-scrollbar flex-1">
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Tugaskan Expert / Dosen</label>
                 <input 
@@ -219,42 +222,67 @@ export default function ManajemenProyekPage() {
               </div>
 
               {/* Progress Checklist Builder */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
                 <div className="flex justify-between items-center mb-4">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Checklist Pengerjaan</label>
-                  <span className="text-sm font-bold text-blue-600">{editModal.data?.progress || 0}% Selesai</span>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Checklist Pengerjaan Task</label>
+                  <span className={`text-sm font-bold px-3 py-1 rounded-lg ${editModal.data?.progress === 100 ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                    {editModal.data?.progress || 0}% Selesai
+                  </span>
                 </div>
 
-                <div className="flex gap-2 mb-4">
+                {/* Progress Bar Preview */}
+                <div className="w-full bg-slate-200 rounded-full h-2 mb-6 overflow-hidden">
+                  <div className="bg-blue-600 h-2 rounded-full transition-all duration-500" style={{ width: `${editModal.data?.progress || 0}%` }}></div>
+                </div>
+
+                {/* Quick Add Templates */}
+                <div className="mb-4">
+                  <p className="text-[10px] font-bold text-slate-400 mb-2">PILIHAN CEPAT (KLIK UNTUK MENAMBAHKAN):</p>
+                  <div className="flex flex-wrap gap-2">
+                    {PREDEFINED_TASKS.map((task) => (
+                      <button 
+                        key={task} 
+                        onClick={() => handleAddTask(task)}
+                        className="bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
+                      >
+                        + {task}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mb-6">
                   <input 
                     type="text" 
-                    placeholder="Contoh: Bab 1 Pendahuluan" 
+                    placeholder="Atau ketik task kustom di sini..." 
                     value={newTaskItem}
                     onChange={(e) => setNewTaskItem(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-                    className="flex-1 border border-slate-200 bg-white p-2.5 rounded-xl text-xs outline-none focus:border-blue-500"
+                    className="flex-1 border border-slate-200 bg-white p-3 rounded-xl text-xs outline-none focus:border-blue-500"
                   />
-                  <button onClick={handleAddTask} className="bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-700">Tambah</button>
+                  <button onClick={() => handleAddTask()} className="bg-slate-800 text-white px-5 py-3 rounded-xl text-xs font-bold hover:bg-slate-700 transition-colors">Tambah</button>
                 </div>
 
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                <div className="space-y-3">
                   {editModal.data?.checklist?.length === 0 ? (
-                    <p className="text-xs text-center text-slate-400 py-4 font-medium italic">Belum ada item ditambahkan.</p>
+                    <div className="text-center p-6 border-2 border-dashed border-slate-300 rounded-xl bg-white">
+                      <p className="text-xs text-slate-400 font-medium">Belum ada item tugas. Tambahkan dari pilihan cepat di atas.</p>
+                    </div>
                   ) : (
                     editModal.data?.checklist?.map((item: any, index: number) => (
-                      <div key={index} className={`flex justify-between items-center p-3 rounded-xl border transition-colors ${item.completed ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'}`}>
+                      <div key={index} className={`flex justify-between items-center p-3.5 rounded-xl border-2 transition-all ${item.completed ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-slate-200'}`}>
                         <label className="flex items-center gap-3 cursor-pointer flex-1">
                           <input 
                             type="checkbox" 
                             checked={item.completed} 
                             onChange={() => handleToggleTask(index)} 
-                            className="w-4 h-4 text-emerald-500 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                            className="w-5 h-5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
                           />
-                          <span className={`text-sm font-semibold ${item.completed ? 'text-emerald-700 line-through decoration-emerald-300' : 'text-slate-700'}`}>
+                          <span className={`text-sm font-bold ${item.completed ? 'text-emerald-700 line-through decoration-emerald-300' : 'text-slate-700'}`}>
                             {item.task}
                           </span>
                         </label>
-                        <button onClick={() => handleRemoveTask(index)} className="text-slate-300 hover:text-rose-500 p-1">
+                        <button onClick={() => handleRemoveTask(index)} className="text-slate-400 hover:text-rose-500 p-1.5 hover:bg-rose-50 rounded-lg transition-colors">
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                         </button>
                       </div>
@@ -276,8 +304,8 @@ export default function ManajemenProyekPage() {
               </div>
             </div>
 
-            <button onClick={handleSaveProject} className="w-full py-4 mt-8 bg-blue-600 text-white font-extrabold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-600/30 transition-all active:scale-95">
-              Simpan Perubahan
+            <button onClick={handleSaveProject} className="w-full py-4 mt-6 bg-blue-600 text-white font-extrabold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-600/30 transition-all active:scale-95 shrink-0">
+              Simpan Perubahan ke Database
             </button>
           </div>
         </div>
