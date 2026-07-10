@@ -6,12 +6,16 @@ import {
   PresentationIcon, UserTieIcon, ChartLineIcon, ChatBubbleIcon 
 } from './IconsAndUI';
 
-export default function TabDashboard({ riwayatList, activeProject, router, handleBukaKunci, isProcessing, setActiveMenu }: any) {
+export default function TabDashboard({ riwayatList, premiumProjects, activeProject, router, handleBukaKunci, isProcessing, setActiveMenu }: any) {
   const [tools, setTools] = useState<any[]>([]);
+
+  // Menggabungkan props agar tahan banting jika data yang dikirim adalah array atau objek tunggal
+  const projectsToDisplay = premiumProjects && premiumProjects.length > 0 
+    ? premiumProjects 
+    : (activeProject ? [activeProject] : []);
 
   useEffect(() => {
     const fetchToolsPreview = async () => {
-      // Ambil harga dan tooltip khusus 3 alat unggulan untuk Preview Dashboard
       const { data } = await supabase.from('ai_tools_pricing').select('*').in('id', ['generator', 'copilot', 'parafrase']);
       if (data) setTools(data);
     };
@@ -22,7 +26,6 @@ export default function TabDashboard({ riwayatList, activeProject, router, handl
     return tools.find(t => t.id === id) || { id, nama: '', koin: 0, tooltip: '', is_hot: false };
   };
 
-  // Langsung arahkan ke Tab AI Tools, tanpa ada transaksi potong koin di Dashboard
   const handleToolClick = () => {
     setActiveMenu('ai-tools');
   };
@@ -65,39 +68,44 @@ export default function TabDashboard({ riwayatList, activeProject, router, handl
           </div>
         </div>
 
-        {/* Box Kondisional: Proyek Berjalan ATAU Promo Premium */}
-        {activeProject ? (
-          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-slate-800 text-sm">Proyek Berjalan</h3>
+        {/* Box Kondisional: Proyek Berjalan (Bisa Lebih Dari 1) ATAU Promo Premium */}
+        {projectsToDisplay.length > 0 ? (
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex flex-col max-h-[420px]">
+            <div className="flex justify-between items-center mb-6 shrink-0">
+              <h3 className="font-bold text-slate-800 text-sm">Proyek Berjalan ({projectsToDisplay.length})</h3>
               <button onClick={() => setActiveMenu('proyek')} className="text-xs text-blue-600 font-semibold hover:underline">Lihat Detail →</button>
             </div>
-            <div className="flex gap-4">
-              <div className="w-1/2">
-                <div className="flex items-start gap-3 mb-4">
-                  <div className="bg-blue-600 text-white p-2 rounded-lg text-lg"><FolderIcon /></div>
-                  <div>
-                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Premium</p>
-                    <p className="text-sm font-bold text-slate-800 leading-snug mt-1">{activeProject.judul.substring(0, 50)}...</p>
+            
+            <div className="overflow-y-auto pr-2 custom-scrollbar space-y-6">
+              {projectsToDisplay.map((project: any, idx: number) => (
+                <div key={project.id || idx} className="flex flex-col sm:flex-row gap-4 border-b border-slate-100 pb-6 last:border-0 last:pb-0">
+                  <div className="sm:w-1/2">
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="bg-blue-600 text-white p-2 rounded-lg text-lg"><FolderIcon /></div>
+                      <div>
+                        <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Premium</p>
+                        <p className="text-sm font-bold text-slate-800 leading-snug mt-1">{project.judul?.substring(0, 40) || 'Proyek Skripsi'}...</p>
+                      </div>
+                    </div>
+                    <table className="w-full text-xs text-slate-600">
+                      <tbody>
+                        <tr><td className="py-1">Paket</td><td className="font-semibold text-emerald-600">{project.paket}</td></tr>
+                        <tr><td className="py-1">Expert</td><td className="font-semibold">{project.expert}</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="sm:w-1/2 bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col justify-center">
+                    <div className="flex justify-between items-end mb-2">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Progress</p>
+                      <p className="text-[10px] text-blue-500">Aktif</p>
+                    </div>
+                    <p className="text-2xl font-black text-slate-800 mb-3">{project.progress || 0}%</p>
+                    <div className="w-full bg-slate-200 rounded-full h-1.5 mb-2">
+                      <div className="bg-emerald-500 h-1.5 rounded-full transition-all" style={{ width: `${project.progress || 0}%` }}></div>
+                    </div>
                   </div>
                 </div>
-                <table className="w-full text-xs text-slate-600">
-                  <tbody>
-                    <tr><td className="py-1">Paket</td><td className="font-semibold text-emerald-600">{activeProject.paket}</td></tr>
-                    <tr><td className="py-1">Expert</td><td className="font-semibold">{activeProject.expert}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <div className="w-1/2 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <div className="flex justify-between items-end mb-2">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Progress</p>
-                  <p className="text-[10px] text-blue-500">Aktif</p>
-                </div>
-                <p className="text-2xl font-black text-slate-800 mb-3">{activeProject.progress}%</p>
-                <div className="w-full bg-slate-200 rounded-full h-1.5 mb-4">
-                  <div className="bg-emerald-500 h-1.5 rounded-full transition-all" style={{ width: `${activeProject.progress}%` }}></div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         ) : (
