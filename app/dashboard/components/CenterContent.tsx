@@ -10,7 +10,8 @@ import TabPengaturan from './TabPengaturan';
 import TabExpert from './TabExpert';
 import { TabKoin, TabTopup } from './BillingTabs';
 
-export default function CenterContent({ activeMenu, setActiveMenu, setIsSidebarOpen, userName, userEmail, userWhatsapp, koin, riwayatList, premiumProjects, handleBukaKunci, isProcessing, router }: any) {
+// Tambahkan userId pada props jika sewaktu-waktu dibutuhkan komponen child
+export default function CenterContent({ activeMenu, setActiveMenu, setIsSidebarOpen, userName, userEmail, userWhatsapp, koin, riwayatList, premiumProjects, handleBukaKunci, isProcessing, router, userId }: any) {
   
   const dokumenList = riwayatList.filter((item: any) => !item.tool_name);
   const jurnalRefList = riwayatList.filter((item: any) => item.tool_name);
@@ -48,10 +49,12 @@ export default function CenterContent({ activeMenu, setActiveMenu, setIsSidebarO
       </header>
 
       <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#F8FAFC]">
-        {activeMenu === 'dashboard' && <TabDashboard riwayatList={riwayatList} activeProject={activeProject} router={router} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} setActiveMenu={setActiveMenu} />}
-        {activeMenu === 'proyek' && <TabProyek activeProject={activeProject} />}
-        {activeMenu === 'expert' && <TabExpert riwayatList={riwayatList} />}
-        {activeMenu === 'ai-tools' && <TabAiTools koin={koin} />}
+        {/* PERBAIKAN: Melempar premiumProjects (array) dan setActiveMenu ke komponen terkait */}
+        {activeMenu === 'dashboard' && <TabDashboard riwayatList={riwayatList} premiumProjects={premiumProjects} activeProject={activeProject} router={router} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} setActiveMenu={setActiveMenu} />}
+        {activeMenu === 'proyek' && <TabProyek premiumProjects={premiumProjects} activeProject={activeProject} setActiveMenu={setActiveMenu} />}
+        {activeMenu === 'expert' && <TabExpert riwayatList={riwayatList} koin={koin} userId={userId} />}
+        
+        {activeMenu === 'ai-tools' && <TabAiTools koin={koin} userId={userId} />}
         {activeMenu === 'dokumen' && <TabDokumen dokumenList={dokumenList} router={router} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} />}
         {activeMenu === 'jurnal' && <TabJurnal jurnalRefList={jurnalRefList} router={router} setActiveMenu={setActiveMenu} />}
         {activeMenu === 'koin' && <TabKoin koin={koin} riwayatList={riwayatList} setActiveMenu={setActiveMenu} />}
