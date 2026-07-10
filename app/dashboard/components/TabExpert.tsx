@@ -38,7 +38,7 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Silakan login kembali.");
 
-      const orderId = `EXP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const orderId = crypto.randomUUID();
 
       const res = await fetch('/api/payment', {
         method: 'POST',
