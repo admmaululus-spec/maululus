@@ -6,13 +6,12 @@ import {
   PresentationIcon, UserTieIcon, ChartLineIcon, ChatBubbleIcon 
 } from './IconsAndUI';
 
-export default function TabDashboard({ riwayatList, activeProject, router, handleBukaKunci, isProcessing, setActiveMenu, koin }: any) {
+export default function TabDashboard({ riwayatList, activeProject, router, handleBukaKunci, isProcessing, setActiveMenu }: any) {
   const [tools, setTools] = useState<any[]>([]);
-  const [isDeducting, setIsDeducting] = useState(false); // Mencegah double click
 
   useEffect(() => {
     const fetchToolsPreview = async () => {
-      // Ambil harga dan tooltip khusus 3 alat unggulan untuk Dashboard
+      // Ambil harga dan tooltip khusus 3 alat unggulan untuk Preview Dashboard
       const { data } = await supabase.from('ai_tools_pricing').select('*').in('id', ['generator', 'copilot', 'parafrase']);
       if (data) setTools(data);
     };
@@ -23,48 +22,9 @@ export default function TabDashboard({ riwayatList, activeProject, router, handl
     return tools.find(t => t.id === id) || { id, nama: '', koin: 0, tooltip: '', is_hot: false };
   };
 
-  const handleToolClick = async (toolId: string) => {
-    if (isDeducting) return; // Cegah klik berkali-kali
-    
-    const tool = getToolData(toolId);
-    
-    // Jika gratis, langsung masuk
-    if (Number(tool.koin) === 0) {
-      router.push(toolId === 'generator' ? '/generator' : `/dashboard/${toolId}`);
-      return;
-    }
-    
-    // Validasi saldo
-    if (Number(koin) < Number(tool.koin)) {
-      alert(`Koin kamu tidak cukup. Butuh ${tool.koin} Koin untuk mengakses ${tool.nama || 'alat ini'}.`);
-      return;
-    }
-    
-    setIsDeducting(true);
-    try {
-      // 1. Ambil ID User
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) {
-        alert("Sesi tidak valid. Silakan login ulang.");
-        return;
-      }
-
-      // 2. Eksekusi Potong Koin ke Supabase
-      const { error } = await supabase
-        .from('users_data')
-        .update({ koin: Number(koin) - Number(tool.koin) })
-        .eq('id', session.user.id);
-
-      if (error) throw error;
-
-      // 3. Lanjutkan Navigasi jika berhasil
-      router.push(`/dashboard/${toolId}`);
-    } catch (err) {
-      console.error(err);
-      alert("Gagal memotong koin karena gangguan sistem. Silakan coba lagi.");
-    } finally {
-      setIsDeducting(false);
-    }
+  // Langsung arahkan ke Tab AI Tools, tanpa ada transaksi potong koin di Dashboard
+  const handleToolClick = () => {
+    setActiveMenu('ai-tools');
   };
 
   return (
@@ -77,28 +37,30 @@ export default function TabDashboard({ riwayatList, activeProject, router, handl
             <h3 className="flex items-center gap-2 font-bold text-blue-700 text-sm">
               <SparklesIcon /> AI TOOLS <span className="text-slate-500 text-xs font-normal">(Gunakan Koin)</span>
             </h3>
-            <button onClick={() => setActiveMenu('ai-tools')} className="text-xs text-blue-600 font-semibold hover:underline">Lihat Semua Tools →</button>
+            <button onClick={() => setActiveMenu('ai-tools')} className="text-xs text-blue-600 font-semibold hover:underline">
+              Lihat Semua Tools →
+            </button>
           </div>
           
           <div className="grid grid-cols-3 gap-4 mb-4">
             <ToolItem 
               icon={<TargetIcon />} label={getToolData('generator').nama || 'Buat Judul'} coin={getToolData('generator').koin} 
-              isFree={Number(getToolData('generator').koin) === 0} tooltip={getToolData('generator').tooltip} onClick={() => handleToolClick('generator')} 
+              isFree={Number(getToolData('generator').koin) === 0} tooltip={getToolData('generator').tooltip} onClick={handleToolClick} 
             />
             <ToolItem 
               icon={<PencilIcon />} label={getToolData('copilot').nama || 'AI Draft Writer'} coin={getToolData('copilot').koin} 
-              isFree={Number(getToolData('copilot').koin) === 0} isHot={getToolData('copilot').is_hot} tooltip={getToolData('copilot').tooltip} onClick={() => handleToolClick('copilot')} 
+              isFree={Number(getToolData('copilot').koin) === 0} isHot={getToolData('copilot').is_hot} tooltip={getToolData('copilot').tooltip} onClick={handleToolClick} 
             />
             <ToolItem 
               icon={<RefreshIcon />} label={getToolData('parafrase').nama || 'Parafrase'} coin={getToolData('parafrase').koin} 
-              isFree={Number(getToolData('parafrase').koin) === 0} tooltip={getToolData('parafrase').tooltip} onClick={() => handleToolClick('parafrase')} 
+              isFree={Number(getToolData('parafrase').koin) === 0} tooltip={getToolData('parafrase').tooltip} onClick={handleToolClick} 
             />
           </div>
           
           <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex gap-3 items-start mt-4">
             <span className="text-blue-500">ℹ️</span>
             <p className="text-[10px] text-slate-600 leading-relaxed">
-              {isDeducting ? 'Memproses koin... Mohon tunggu.' : 'Arahkan kursor ke icon tool untuk melihat fungsi spesifiknya. Pastikan saldo koin cukup sebelum menggunakan AI.'}
+              Klik salah satu alat di atas untuk membuka direktori lengkap AI Tools yang tersedia.
             </p>
           </div>
         </div>
