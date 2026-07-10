@@ -38,10 +38,8 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Silakan login kembali.");
 
-      // 1. Buat ID Pesanan Unik
       const orderId = `EXP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-      // 2. Minta Token Snap Midtrans
       const res = await fetch('/api/payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -58,15 +56,13 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      // 3. Panggil Snap Pop-up Midtrans
       (window as any).snap.pay(data.token, {
         onSuccess: async function(result: any) {
-          // Potong koin jika opsi diskon koin dicentang
           if (useKoin && koinTerpotong > 0) {
             await supabase.from('users_data').update({ koin: koin - koinTerpotong }).eq('id', session.user.id);
           }
 
-          // --- CATAT KE TABEL TRANSACTIONS ---
+          // Catat transaksi
           await supabase.from('transactions').insert({
             user_id: session.user.id,
             user_email: session.user.email,
@@ -77,8 +73,8 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
             status: 'SUCCESS'
           });
 
-          // Masukkan ke Database Proyek sebagai "Aktif" dengan checklist kosong
-          await supabase.from('premium_projects').insert({
+          // Insert ke Proyek (Sekarang dengan Error Handling Kuat)
+          const { error: projectError } = await supabase.from('premium_projects').insert({
             id: orderId,
             user_id: session.user.id,
             user_email: session.user.email,
@@ -92,14 +88,19 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
             no_whatsapp: form.no_whatsapp,
             progress: 0,
             is_active: true,
-            checklist: [] // Pastikan kolom ini ada di Supabase tipe JSONB
+            checklist: [] // Tipe JSONB yang ada di Supabase
           });
 
+          if (projectError) {
+            console.error("Gagal simpan proyek:", projectError);
+            alert(`PENTING: Pembayaran berhasil, tapi terjadi error simpan data (${projectError.message}). Harap lapor ke admin segera!`);
+          } else {
+            alert("Pembayaran Lunas & Proyek Berhasil Dibuat! Kamu akan diarahkan ke WhatsApp Admin.");
+          }
+
           // Redirect ke WhatsApp
-          const waNumber = '6285815999953'; // GANTI DENGAN NOMOR WA ADMIN
+          const waNumber = '6285815999953';
           const waMessage = encodeURIComponent(`Halo Admin Maululus, pesanan Expert Assistance atas nama *${form.nama}* telah berhasil dibayar.\n\n*Paket:* ${selectedPaket.nama}\n*Order ID:* ${orderId}\n\nMohon segera diproses ya!`);
-          
-          alert("Pembayaran Lunas! Kamu akan diarahkan ke WhatsApp Admin.");
           window.location.href = `https://wa.me/${waNumber}?text=${waMessage}`;
         },
         onPending: function(result: any) {

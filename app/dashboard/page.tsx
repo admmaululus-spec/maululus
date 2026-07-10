@@ -45,6 +45,11 @@ export default function DashboardPage() {
           supabase.from('ai_tools_history').select('*').eq('user_id', currentUserId).order('created_at', { ascending: false })
         ]);
 
+        // Tangkap dan log Error Premium Projects jika ada
+        if (proyekRes.error) {
+          console.error("Gagal load premium_projects:", proyekRes.error.message);
+        }
+
         let userData = userRes.data;
         if (!userData) {
           const metaWhatsapp = session.user.user_metadata?.whatsapp || '';
