@@ -1,3 +1,4 @@
+// app/api/generate-judul/route.ts
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { cookies } from 'next/headers';
@@ -15,11 +16,22 @@ export async function POST(req: Request) {
       { cookies: { get(name: string) { return cookieStore.get(name)?.value; } } }
     );
     
-    // Autentikasi
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    
+    // --- 1. LOGIKA FREE TRIAL UNTUK USER BELUM LOGIN ---
+    let freeUsageCount = 0;
+    if (!session) {
+      freeUsageCount = parseInt(cookieStore.get('free_gen_count')?.value || '0', 10);
+      
+      // Jika limit sudah habis, tolak permintaan
+      if (freeUsageCount >= 2) {
+        return NextResponse.json(
+          { error: 'Batas penggunaan gratis habis (Maks. 2x). Silakan Masuk / Daftar Akun secara gratis untuk melanjutkan!' }, 
+          { status: 401 }
+        );
+      }
+    }
 
-    const userId = session.user.id; // Simpan ID User
     const body = await req.json();
     const { universitas, jurusan, minat, masalah, metodologi, jenisKarya } = body;
 
@@ -27,49 +39,45 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Universitas dan Jurusan harus diisi' }, { status: 400 });
     }
 
-    // =========================================================
-    // 1. CEK HARGA FITUR DARI DATABASE ADMIN (Tabel ai_tools_pricing)
-    // =========================================================
-    // Catatan: Pastikan ID tool di database adalah 'generator' (atau sesuaikan jika berbeda)
-    const { data: pricingData } = await supabase
-      .from('ai_tools_pricing')
-      .select('koin')
-      .eq('id', 'generator') 
-      .single();
-    
-    // Jika tidak ditemukan di tabel, set harga default (misal 5)
-    const HARGA_KOIN = pricingData?.koin !== undefined ? pricingData.koin : 5;
+    let currentKoin = 0;
+    let HARGA_KOIN = 0;
 
-    // =========================================================
-    // 2. CEK SALDO DAN POTONG KOIN
-    // =========================================================
-    const { data: profile } = await supabase.from('profiles').select('koin').eq('id', userId).single();
-    const currentKoin = profile?.koin || 0;
+    // --- 2. LOGIKA PEMOTONGAN KOIN UNTUK USER LOGIN ---
+    if (session) {
+      const userId = session.user.id;
+      
+      const { data: pricingData } = await supabase
+        .from('ai_tools_pricing')
+        .select('koin')
+        .eq('id', 'generator') 
+        .single();
+      
+      HARGA_KOIN = pricingData?.koin !== undefined ? pricingData.koin : 5;
 
-    // Jika koin kurang, lemparkan error 402 agar frontend memunculkan popup Top Up
-    if (currentKoin < HARGA_KOIN) {
-      return NextResponse.json({ error: `Koin tidak cukup! Butuh ${HARGA_KOIN} Koin.` }, { status: 402 });
+      const { data: profile } = await supabase.from('profiles').select('koin').eq('id', userId).single();
+      currentKoin = profile?.koin || 0;
+
+      if (currentKoin < HARGA_KOIN) {
+        return NextResponse.json({ error: `Koin tidak cukup! Butuh ${HARGA_KOIN} Koin.` }, { status: 402 });
+      }
+
+      if (HARGA_KOIN > 0) {
+        const { error: deductError } = await supabase
+          .from('profiles')
+          .update({ koin: currentKoin - HARGA_KOIN })
+          .eq('id', userId);
+          
+        if (deductError) throw new Error("Gagal memotong koin di database.");
+      }
+
+      await supabase.from('ai_tools_history').insert({
+        user_id: userId,
+        tool_name: 'Buat Judul',
+        input_data: `Jurusan: ${String(jurusan).substring(0,25)}...`
+      });
     }
 
-    // Eksekusi potong koin (Jika harganya lebih dari 0)
-    if (HARGA_KOIN > 0) {
-      const { error: deductError } = await supabase
-        .from('profiles')
-        .update({ koin: currentKoin - HARGA_KOIN })
-        .eq('id', userId);
-        
-      if (deductError) throw new Error("Gagal memotong koin di database.");
-    }
-
-    // Catat histori penggunaan AI agar muncul di dashboard user
-    await supabase.from('ai_tools_history').insert({
-      user_id: userId,
-      tool_name: 'Buat Judul',
-      input_data: `Jurusan: ${String(jurusan).substring(0,25)}...`
-    });
-    // =========================================================
-
-    // Batasi input untuk keamanan (Sesuai kodingan aslimu)
+    // --- 3. EKSEKUSI PROSES AI GEMINI ---
     const safeUniversitas = String(universitas).substring(0, 100);
     const safeJurusan = String(jurusan).substring(0, 100);
     const safeMinat = minat ? String(minat).substring(0, 300) : '';
@@ -79,10 +87,7 @@ export async function POST(req: Request) {
 
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-3.5-flash',
-      generationConfig: {
-        responseMimeType: "application/json",
-        temperature: 0.7
-      }
+      generationConfig: { responseMimeType: "application/json", temperature: 0.7 }
     });
 
     const promptText = `
@@ -120,15 +125,30 @@ export async function POST(req: Request) {
     let textOutput = result.response.text();
 
     try {
-      // JSON Sanitizer: Hapus markdown block ```json jika AI membandel
       textOutput = textOutput.replace(/```json/g, '').replace(/```/g, '').trim();
       const parsedData = JSON.parse(textOutput);
       
-      // KEMBALIKAN DATA ASLI + SISA KOIN
-      return NextResponse.json({
+      // --- 4. KIRIM RESPONSE & SET COOKIE UNTUK USER ANONIM ---
+      const responseData = {
         ...parsedData,
-        sisa_koin: currentKoin - HARGA_KOIN
-      });
+        sisa_koin: session ? (currentKoin - HARGA_KOIN) : null,
+        sisa_percobaan_gratis: !session ? 1 - freeUsageCount : null
+      };
+
+      const response = NextResponse.json(responseData);
+
+      // Tambahkan/Update cookie jika ini user anonim (masa aktif 30 hari)
+      if (!session) {
+        response.cookies.set('free_gen_count', (freeUsageCount + 1).toString(), {
+          path: '/',
+          maxAge: 60 * 60 * 24 * 30, // 30 Hari
+          httpOnly: true, // Tidak bisa dimanipulasi dengan script document.cookie
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+        });
+      }
+
+      return response;
 
     } catch (parseError) {
       console.error("Gagal parse JSON dari AI:", textOutput);

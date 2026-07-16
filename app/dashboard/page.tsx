@@ -45,12 +45,12 @@ export default function DashboardPage() {
           supabase.from('ai_tools_history').select('*').eq('user_id', currentUserId).order('created_at', { ascending: false })
         ]);
 
-        // Tangkap dan log Error Premium Projects jika ada
         if (proyekRes.error) {
           console.error("Gagal load premium_projects:", proyekRes.error.message);
         }
 
         let userData = userRes.data;
+        // Buat data user baru jika belum ada di tabel users_data
         if (!userData) {
           const metaWhatsapp = session.user.user_metadata?.whatsapp || '';
           const { data: newUser } = await supabase.from('users_data').insert({
@@ -64,6 +64,7 @@ export default function DashboardPage() {
         setUserWhatsapp(userData?.whatsapp || 'Belum diatur');
         setPremiumProjects(proyekRes.data || []);
 
+        // Menggabungkan dan mengurutkan riwayat AI & Skripsi
         const combinedHistory = [...(historyRes.data || []), ...(aiHistoryRes.data || [])];
         combinedHistory.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         setRiwayatList(combinedHistory);
@@ -77,15 +78,30 @@ export default function DashboardPage() {
     initializeDashboard();
   }, [router]);
 
+  // PERBAIKAN: Menambahkan Try-Catch pada parse JSON agar dashboard tidak blank
   const syncPendingData = async (uid: string) => {
     const pendingJudul = localStorage.getItem('maululus_pending_judul');
     const pendingOutline = localStorage.getItem('maululus_pending_outline');
+    
     if (pendingJudul && pendingOutline) {
-      const { data: checkExist } = await supabase.from('history_skripsi').select('id').eq('user_id', uid).eq('judul', pendingJudul).maybeSingle();
-      if (!checkExist) {
-        await supabase.from('history_skripsi').insert({ user_id: uid, judul: pendingJudul, outline: JSON.parse(pendingOutline), is_unlocked: false });
+      try {
+        const parsedOutline = JSON.parse(pendingOutline);
+        const { data: checkExist } = await supabase.from('history_skripsi').select('id').eq('user_id', uid).eq('judul', pendingJudul).maybeSingle();
+        
+        if (!checkExist) {
+          await supabase.from('history_skripsi').insert({ 
+            user_id: uid, 
+            judul: pendingJudul, 
+            outline: parsedOutline, 
+            is_unlocked: false 
+          });
+        }
+      } catch (e) {
+        console.error("Format data outline di localStorage tidak valid", e);
+      } finally {
+        // Selalu bersihkan localStorage entah proses insert berhasil atau gagal
+        ['maululus_pending_judul', 'maululus_pending_outline', 'maululus_history'].forEach(key => localStorage.removeItem(key));
       }
-      ['maululus_pending_judul', 'maululus_pending_outline', 'maululus_history'].forEach(key => localStorage.removeItem(key));
     }
   };
 
@@ -100,6 +116,7 @@ export default function DashboardPage() {
     try {
       await supabase.from('users_data').update({ koin: koin - 1 }).eq('id', userId);
       await supabase.from('history_skripsi').update({ is_unlocked: true }).eq('id', id_skripsi);
+      
       setKoin(prev => prev - 1);
       setRiwayatList(prev => prev.map(item => item.id === id_skripsi ? { ...item, is_unlocked: true } : item));
     } catch (err) {
@@ -112,13 +129,14 @@ export default function DashboardPage() {
   const userName = userEmail.split('@')[0].charAt(0).toUpperCase() + userEmail.split('@')[0].slice(1);
 
   if (isLoading) return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+    <div className="h-[100dvh] w-full bg-[#F4F7FE] flex items-center justify-center">
       <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-[#3b82f6]"></div>
     </div>
   );
 
   return (
-    <div className="flex h-screen bg-[#F4F7FE] font-sans text-slate-800 overflow-hidden">
+    // Menggunakan h-full karena tinggi 100dvh sudah di-handle oleh layout.tsx
+    <div className="flex h-full w-full bg-[#F4F7FE] font-sans text-slate-800 overflow-hidden">
       <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} activeMenu={activeMenu} setActiveMenu={setActiveMenu} userName={userName} isPro={isPro} handleLogout={handleLogout} />
       
       <CenterContent activeMenu={activeMenu} setActiveMenu={setActiveMenu} setIsSidebarOpen={setIsSidebarOpen} userName={userName} userEmail={userEmail} userWhatsapp={userWhatsapp} koin={koin} riwayatList={riwayatList} premiumProjects={premiumProjects} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} router={router} />

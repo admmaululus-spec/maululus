@@ -1,33 +1,54 @@
-'use client';
-
+// app/page.tsx
 import Link from 'next/link';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/app/lib/supabase';
+import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
 import FadeIn from './components/FadeIn';
 import ServicesSection from './components/home/ServicesSection';
 import Footer from './components/home/Footer';
 
-export default function Home() {
-  const router = useRouter();
-  const ADMIN_EMAILS = ['vianeyricky@gmail.com', 'emailkamu@gmail.com']; 
+export const dynamic = 'force-dynamic';
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        const userEmail = session.user.email || '';
-        if (ADMIN_EMAILS.includes(userEmail)) {
-          router.push('/admin');
-        } else {
-          router.push('/dashboard');
-        }
-      }
-    });
+async function getExpertPackages(supabase: any) {
+  try {
+    const { data, error } = await supabase
+      .from('expert_packages')
+      .select('*')
+      .eq('is_active', true)
+      .order('price', { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
+  } catch (e) {
+    // Fallback jika tabel belum ada / error
+    return [
+      { id: 1, name: 'Paket Proposal', price: 1850000, features: ['Penyusunan Judul & Bab 1-3', 'Revisi Terstruktur'] },
+      { id: 2, name: 'Paket Seminar', price: 4200000, features: ['Olah Data Penelitian', 'Bab 4-5 & Persiapan Seminar'] },
+    ];
+  }
+}
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [router]);
+export default async function Home() {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: { get(name: string) { return cookieStore.get(name)?.value; } } }
+  );
+
+  // 1. Cek Sesi User & Lakukan Redirect Instan
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const ADMIN_EMAILS = ['vianeyricky@gmail.com', 'emailkamu@gmail.com']; 
+    if (user.email && ADMIN_EMAILS.includes(user.email)) {
+      redirect('/admin');
+    } else {
+      redirect('/dashboard');
+    }
+  }
+
+  // 2. Ambil Data Paket Layanan Expert
+  const packages = await getExpertPackages(supabase);
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-[#0f2a4a] selection:bg-green-200">
@@ -89,7 +110,7 @@ export default function Home() {
         </section>
 
         {/* PROBLEM SECTION */}
-        <section className="bg-[#0f2a4a] py-24 text-white">
+        <section id="fitur" className="bg-[#0f2a4a] py-24 text-white">
           <div className="mx-auto max-w-7xl px-6">
             <FadeIn>
               <div className="text-center mb-16">
@@ -116,7 +137,7 @@ export default function Home() {
 
         <ServicesSection />
 
-        {/* CARA KERJA & CTA SECTION */}
+        {/* CARA KERJA SECTION */}
         <section id="cara-kerja" className="bg-[#0f2a4a] py-24 text-white relative overflow-hidden">
           <div className="mx-auto max-w-7xl px-6 relative z-10">
             <FadeIn className="text-center mb-20"><h2 className="text-3xl font-extrabold sm:text-4xl tracking-tight">3 Langkah Menuju Wisuda</h2></FadeIn>
@@ -128,6 +149,41 @@ export default function Home() {
           </div>
         </section>
         
+        {/* LAYANAN & HARGA SECTION */}
+        <section id="layanan" className="py-24 bg-slate-50 border-t border-slate-200">
+          <div className="mx-auto max-w-6xl px-6">
+            <FadeIn className="text-center mb-16">
+              <h2 className="text-3xl font-extrabold sm:text-4xl text-[#0f2a4a] tracking-tight">Pilihan Layanan Expert</h2>
+              <p className="mt-4 text-slate-500 text-lg">Bimbingan penyusunan skripsi langsung dengan praktisi & akademisi terbaik</p>
+            </FadeIn>
+            
+            <div className="grid md:grid-cols-3 gap-8">
+              {packages.map((pkg: any, idx: number) => (
+                <FadeIn key={pkg.id || idx} delay={idx * 200} className={`bg-white rounded-3xl p-8 border ${idx === 1 ? 'border-green-500 shadow-xl shadow-green-100 relative scale-105' : 'border-slate-200'}`}>
+                  {idx === 1 && (
+                    <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-1 rounded-full text-xs font-bold tracking-wide">POPULAR</span>
+                  )}
+                  <h3 className="text-xl font-bold text-[#0f2a4a]">{pkg.name}</h3>
+                  <div className="mt-4 mb-6">
+                    <span className="text-4xl font-extrabold text-[#0f2a4a]">Rp{(pkg.price || 0).toLocaleString('id-ID')}</span>
+                  </div>
+                  <ul className="space-y-4 mb-8">
+                    {Array.isArray(pkg.features) ? pkg.features.map((feature: string, fIdx: number) => (
+                      <li key={fIdx} className="flex items-start gap-3 text-sm text-slate-600">
+                        <svg className="w-5 h-5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        <span>{feature}</span>
+                      </li>
+                    )) : null}
+                  </ul>
+                  <Link href={`/dashboard?checkout=${pkg.id}`} className={`block w-full text-center py-3 rounded-xl font-bold transition-all ${idx === 1 ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-slate-100 text-[#0f2a4a] hover:bg-slate-200'}`}>
+                    Pesan Sekarang
+                  </Link>
+                </FadeIn>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section className="py-32 bg-white border-t border-slate-100">
           <div className="mx-auto max-w-3xl px-6 text-center">
             <FadeIn>

@@ -3,7 +3,15 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
 
-type UserData = { id: string; koin: number; is_pro: boolean; whatsapp: string; email?: string; created_at: string };
+type UserData = { 
+  id: string; 
+  koin: number; 
+  is_pro: boolean; 
+  whatsapp: string; 
+  email?: string; 
+  created_at: string;
+  generate_count?: number; // Tambahan field untuk total generate
+};
 type HistoryData = { id: string; paket_nama: string; koin_jumlah: number; harga_rp: number; metode: string; created_at: string };
 
 export default function AdminUsersPage() {
@@ -19,8 +27,32 @@ export default function AdminUsersPage() {
   });
 
   const fetchUsers = async () => {
-    const { data } = await supabase.from('users_data').select('*').order('koin', { ascending: false });
-    if (data) setUsers(data);
+    setIsLoading(true);
+    
+    // 1. Ambil data seluruh user
+    const { data: usersData } = await supabase
+      .from('users_data')
+      .select('*')
+      .order('koin', { ascending: false });
+      
+    // 2. Ambil data riwayat AI (khusus Buat Judul) untuk dihitung
+    const { data: aiHistoryData } = await supabase
+      .from('ai_tools_history')
+      .select('user_id')
+      .eq('tool_name', 'Buat Judul');
+
+    if (usersData) {
+      // 3. Gabungkan data user dengan jumlah riwayatnya
+      const combinedUsers = usersData.map(user => {
+        const generateCount = aiHistoryData 
+          ? aiHistoryData.filter(h => h.user_id === user.id).length 
+          : 0;
+          
+        return { ...user, generate_count: generateCount };
+      });
+      setUsers(combinedUsers);
+    }
+    
     setIsLoading(false);
   };
 
@@ -35,7 +67,7 @@ export default function AdminUsersPage() {
       // 1. Update koin di users_data
       await supabase.from('users_data').update({ koin: newKoin }).eq('id', user.id);
       
-      // 2. Catat ke tabel transactions (TIDAK LAGI topup_history)
+      // 2. Catat ke tabel transactions
       await supabase.from('transactions').insert({
         user_id: user.id,
         user_email: user.email || 'Tanpa Email',
@@ -66,7 +98,6 @@ export default function AdminUsersPage() {
   // Buka Modal Riwayat Topup
   const openHistoryModal = async (user: UserData) => {
     setHistoryModal({ show: true, user: user, records: [], loading: true });
-    // Tarik riwayat dari tabel transactions
     const { data } = await supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
     setHistoryModal({ show: true, user: user, records: data || [], loading: false });
   };
@@ -83,7 +114,7 @@ export default function AdminUsersPage() {
       <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-800 tracking-tight">Kelola Pengguna</h1>
-          <p className="text-slate-500 mt-1 text-sm">Manajemen koin, status PRO, dan riwayat top up mahasiswa.</p>
+          <p className="text-slate-500 mt-1 text-sm">Manajemen koin, status PRO, riwayat pemakaian AI, dan top up.</p>
         </div>
         
         <div className="relative w-full md:w-80">
@@ -107,15 +138,16 @@ export default function AdminUsersPage() {
               <tr>
                 <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px]">Email / WhatsApp</th>
                 <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px]">Sisa Koin</th>
+                <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px]">Total Generate</th>
                 <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px]">Status Paket</th>
                 <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px] text-right">Aksi Cepat</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
-                 <tr><td colSpan={4} className="px-6 py-12 text-center text-blue-600 font-bold animate-pulse">Memuat data pengguna...</td></tr>
+                 <tr><td colSpan={5} className="px-6 py-12 text-center text-blue-600 font-bold animate-pulse">Memuat data pengguna...</td></tr>
               ) : filteredUsers.length === 0 ? (
-                 <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400 font-medium">Tidak ada pengguna yang cocok dengan pencarian.</td></tr>
+                 <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-medium">Tidak ada pengguna yang cocok dengan pencarian.</td></tr>
               ) : (
                 filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
@@ -130,6 +162,11 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="font-black text-amber-600 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-100">{user.koin} 🪙</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100">
+                        {user.generate_count || 0} Kali
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <button 
