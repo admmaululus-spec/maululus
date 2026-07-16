@@ -6,6 +6,7 @@ import { createServerClient } from '@supabase/ssr';
 import FadeIn from './components/FadeIn';
 import ServicesSection from './components/home/ServicesSection';
 import Footer from './components/home/Footer';
+import Image from 'next/image';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
@@ -21,7 +22,6 @@ async function getExpertPackages(supabase: any) {
     if (error) throw error;
     return data || [];
   } catch (e) {
-    // Fallback jika tabel belum ada / error
     return [
       { id: 1, name: 'Paket Proposal', price: 1850000, features: ['Penyusunan Judul & Bab 1-3', 'Revisi Terstruktur'] },
       { id: 2, name: 'Paket Seminar', price: 4200000, features: ['Olah Data Penelitian', 'Bab 4-5 & Persiapan Seminar'] },
@@ -37,7 +37,6 @@ export default async function Home() {
     { cookies: { get(name: string) { return cookieStore.get(name)?.value; } } }
   );
 
-  // 1. Cek Sesi User & Lakukan Redirect Instan
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
     const ADMIN_EMAILS = ['vianeyricky@gmail.com', 'emailkamu@gmail.com']; 
@@ -48,29 +47,27 @@ export default async function Home() {
     }
   }
 
-  // 2. Ambil Data Paket Layanan Expert
   const packages = await getExpertPackages(supabase);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-[#0f2a4a] selection:bg-green-200">
+    <div className="min-h-screen bg-[#F8FAFC] font-sans text-[#0f2a4a] selection:bg-green-200 overflow-x-hidden">
       
       {/* NAVBAR */}
-      <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md transition-all">
+      <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-md transition-all">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
           <Link href="/" className="text-2xl font-extrabold tracking-tight text-[#0f2a4a]">
-            Mau<span className="text-green-500">lulus</span>
+            Mau<span className="text-green-600">lulus</span>
           </Link>
           <div className="hidden md:flex items-center gap-8">
-            <nav className="flex items-center gap-8 font-medium text-sm text-slate-500">
+            <nav className="flex items-center gap-8 font-semibold text-sm text-slate-600">
               <a href="#beranda" className="hover:text-[#0f2a4a] transition-colors">Beranda</a>
-              <a href="#fitur" className="hover:text-[#0f2a4a] transition-colors">Fitur</a>
               <a href="#cara-kerja" className="hover:text-[#0f2a4a] transition-colors">Cara Kerja</a>
-              <a href="#layanan" className="hover:text-green-600 font-bold transition-colors">Layanan & Harga</a>
+              <a href="#layanan" className="hover:text-[#0f2a4a] transition-colors">Layanan & Harga</a>
             </nav>
             <div className="h-5 w-px bg-slate-200"></div>
             <div className="flex items-center gap-4">
-              <Link href="/auth" className="text-sm font-bold text-slate-600 hover:text-[#0f2a4a] transition-colors px-2">Masuk</Link>
-              <Link href="/auth" className="rounded-xl bg-[#0f2a4a] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-slate-800 active:scale-95 flex items-center gap-2">Daftar Gratis</Link>
+              <Link href="/auth" className="text-sm font-bold text-slate-700 hover:text-[#0f2a4a] transition-colors px-2">Masuk</Link>
+              <Link href="/auth" className="rounded-lg bg-[#0f2a4a] px-5 py-2.5 text-sm font-bold text-white shadow-md transition-all hover:bg-slate-800 active:scale-95">Daftar Gratis</Link>
             </div>
           </div>
           <div className="md:hidden flex items-center gap-4">
@@ -79,119 +76,197 @@ export default async function Home() {
         </div>
       </header>
 
-      <main className="overflow-x-hidden">
-        {/* HERO SECTION */}
-        <section id="beranda" className="relative flex min-h-[90vh] flex-col items-center justify-center px-6 pt-16 pb-20">
-          <div className="absolute top-10 left-1/2 -z-10 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-green-500/10 blur-[120px]"></div>
-          <FadeIn className="max-w-4xl text-center w-full z-10">
-            <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-green-200/50 bg-green-50/50 px-5 py-2 text-xs font-bold uppercase tracking-widest text-green-700 shadow-sm backdrop-blur-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-              </span>
-              Platform AI Skripsi #1 di Indonesia
-            </div>
-            <h1 className="mb-8 text-5xl font-extrabold leading-tight tracking-tight text-[#0f2a4a] sm:text-7xl">
-              Kalau Kamu MAU <br />
-              <span className="text-green-500">Kamu Pasti LULUS</span>
-            </h1>
-            <p className="mx-auto mb-10 max-w-2xl text-lg font-medium text-slate-500 sm:text-xl leading-relaxed">
-              Udah Mau Lulus ya? Maululus membantu mahasiswa menemukan judul skripsi, menyusun proposal, mencari referensi jurnal, dan membangun kerangka penelitian lebih cepat dengan bantuan AI.
-            </p>
-            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link href="/generator" className="w-full flex items-center justify-center gap-2 rounded-2xl bg-green-500 px-8 py-4 text-sm font-bold text-white shadow-xl shadow-green-500/20 transition-all hover:bg-green-600 hover:-translate-y-1 sm:w-auto uppercase tracking-wide">
-                Mulai Generate Judul
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-              </Link>
-              <a href="#layanan" className="w-full flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-8 py-4 text-sm font-bold text-slate-700 transition-all hover:border-green-300 hover:bg-slate-50 sm:w-auto uppercase tracking-wide">
-                Lihat Paket Expert
-              </a>
-            </div>
-          </FadeIn>
-        </section>
+      <main>
+        {/* HERO SECTION (Sesuai Desain Gambar) */}
+        <section id="beranda" className="relative flex flex-col items-center justify-center px-6 pt-16 pb-24 md:pt-24 bg-gradient-to-b from-[#F8FAFC] to-white">
+          <div className="mx-auto max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            
+            {/* Kolom Kiri: Teks */}
+            <FadeIn className="flex flex-col items-start text-left z-10">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-green-700">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                PLATFORM AI SKRIPSI #1 DI INDONESIA
+              </div>
+              
+              <h1 className="mb-2 text-4xl font-extrabold leading-tight tracking-tight text-[#0f2a4a] sm:text-5xl">
+                AI Skripsi yang Membantu<br />Kamu Lulus Lebih Cepat.
+              </h1>
+              
+              <h2 className="mb-6 text-5xl font-black leading-tight tracking-tight text-[#0f2a4a] sm:text-6xl uppercase">
+                Kalau Kamu MAU,<br />
+                <span className="text-green-600">Kamu Pasti LULUS</span>
+              </h2>
+              
+              <p className="mb-8 max-w-lg text-lg font-medium text-slate-600 leading-relaxed">
+                Maululus membantu mahasiswa menemukan judul skripsi, menyusun proposal, mencari referensi jurnal, dan membangun kerangka penelitian lebih cepat dengan bantuan AI.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                <Link href="/generator" className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-lg bg-green-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-green-600/20 transition-all hover:bg-green-700 hover:-translate-y-0.5 uppercase">
+                  Mulai Generate Judul &rarr;
+                </Link>
+                <Link href="#contoh" className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-6 py-3.5 text-sm font-bold text-slate-700 transition-all hover:border-slate-400 hover:bg-slate-50 uppercase">
+                  Lihat Contoh Hasil
+                </Link>
+              </div>
 
-        {/* PROBLEM SECTION */}
-        <section id="fitur" className="bg-[#0f2a4a] py-24 text-white">
-          <div className="mx-auto max-w-7xl px-6">
-            <FadeIn>
-              <div className="text-center mb-16">
-                <h2 className="text-3xl font-extrabold sm:text-4xl text-white tracking-tight">Fase Terberat Mahasiswa Akhir</h2>
-                <p className="mt-4 text-slate-300 text-lg">Kami tahu persis apa yang membuat skripsimu tidak kunjung selesai.</p>
+              {/* Trust Indicators (Bintang & Logo Kampus) */}
+              <div className="mt-12 flex flex-col sm:flex-row items-start sm:items-center gap-6 border-t border-slate-200 pt-8 w-full">
+                <div className="flex items-center gap-3">
+                  <div className="flex text-amber-400">
+                    {/* 5 Bintang SVG */}
+                    {[...Array(5)].map((_, i) => (
+                      <svg key={i} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" /></svg>
+                    ))}
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-800">4.9/5</span>
+                    <p className="text-xs text-slate-500 font-medium">Dari 5.200+ Mahasiswa</p>
+                  </div>
+                </div>
+                
+                <div className="hidden sm:block h-10 w-px bg-slate-200"></div>
+
+                <div>
+                  <p className="text-xs text-slate-500 font-medium mb-2">Dipakai mahasiswa dari</p>
+                  <div className="flex items-center gap-3 text-sm font-black text-slate-400">
+                    {/* Placeholder teks kampus sesuai gambar */}
+                    <span className="text-amber-500">UB</span>
+                    <span className="text-blue-600">ITS</span>
+                    <span className="text-blue-800">UNAIR</span>
+                    <span className="text-indigo-900">UNDIP</span>
+                    <span className="text-yellow-500">UNNES</span>
+                    <span className="text-xs font-semibold bg-slate-100 px-2 py-1 rounded-md text-slate-600">+150 Kampus lainnya</span>
+                  </div>
+                </div>
               </div>
             </FadeIn>
-            <div className="grid gap-6 md:grid-cols-3">
-              <FadeIn delay={100} className="rounded-3xl bg-slate-800/40 p-8 border border-slate-700/50 hover:bg-slate-800/60 transition-colors">
-                <h3 className="text-xl font-bold mb-3 text-white">Mentok Ide Judul</h3>
-                <p className="text-slate-400 leading-relaxed text-sm">Sudah ngajuin 5 judul ke Dosen Pembimbing tapi ditolak semua karena dianggap kurang inovatif atau pasaran.</p>
-              </FadeIn>
-              <FadeIn delay={300} className="rounded-3xl bg-slate-800/40 p-8 border border-slate-700/50 hover:bg-slate-800/60 transition-colors">
-                <h3 className="text-xl font-bold mb-3 text-white">Bingung Mulai Nulis</h3>
-                <p className="text-slate-400 leading-relaxed text-sm">Judul sudah ACC, tapi layar laptop berjam-jam dibiarkan kosong karena bingung menyusun kalimat Latar Belakang.</p>
-              </FadeIn>
-              <FadeIn delay={500} className="rounded-3xl bg-slate-800/40 p-8 border border-slate-700/50 hover:bg-slate-800/60 transition-colors">
-                <h3 className="text-xl font-bold mb-3 text-white">Takut Plagiasi (Turnitin)</h3>
-                <p className="text-slate-400 leading-relaxed text-sm">Kesulitan memparafrase kalimat dari jurnal referensi, takut ketahuan copy-paste saat dicek Turnitin.</p>
-              </FadeIn>
-            </div>
+
+            {/* Kolom Kanan: Mockup Dashboard */}
+            <FadeIn delay={200} className="relative z-10 w-full flex justify-center lg:justify-end">
+              <div className="relative w-full max-w-[600px] aspect-[4/3] rounded-2xl bg-white shadow-2xl border border-slate-100 overflow-hidden flex items-center justify-center">
+                 {/* 
+                   Ganti src dengan path gambar mockup Anda jika sudah ada di folder public
+                   Contoh: <Image src="/mockup-dashboard.png" fill className="object-cover" alt="Dashboard" />
+                 */}
+                 <div className="text-center p-8">
+                    <p className="text-slate-400 font-bold mb-2">Area Gambar Mockup</p>
+                    <p className="text-sm text-slate-500">Simpan gambar UI dashboard Anda di folder <code>public/</code> dengan nama <code className="text-blue-500">mockup-dashboard.png</code> dan panggil menggunakan tag img di sini.</p>
+                 </div>
+              </div>
+              
+              {/* Background Ornamen */}
+              <div className="absolute top-1/2 left-1/2 -z-10 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-100/50 blur-[100px]"></div>
+            </FadeIn>
+
           </div>
         </section>
 
-        <ServicesSection />
-
-        {/* CARA KERJA SECTION */}
-        <section id="cara-kerja" className="bg-[#0f2a4a] py-24 text-white relative overflow-hidden">
+        {/* 3 LANGKAH MENUJU WISUDA SECTION */}
+        <section id="cara-kerja" className="bg-[#0f2a4a] py-20 text-white relative overflow-hidden">
           <div className="mx-auto max-w-7xl px-6 relative z-10">
-            <FadeIn className="text-center mb-20"><h2 className="text-3xl font-extrabold sm:text-4xl tracking-tight">3 Langkah Menuju Wisuda</h2></FadeIn>
-            <div className="grid gap-12 md:grid-cols-3 relative">
-              <FadeIn delay={200} className="text-center relative z-10"><h3 className="text-xl font-bold mb-3">01. Input Data</h3><p className="text-slate-400 text-sm">Ketik program studimu dan topik apa yang paling kamu sukai.</p></FadeIn>
-              <FadeIn delay={400} className="text-center relative z-10"><h3 className="text-xl font-bold mb-3">02. Biar AI Bekerja</h3><p className="text-slate-400 text-sm">AI akan meracik kombinasi judul, metode, dan masalah relevan.</p></FadeIn>
-              <FadeIn delay={600} className="text-center relative z-10"><h3 className="text-xl font-bold mb-3">03. Konsul & ACC</h3><p className="text-slate-400 text-sm">Bawa hasil rekomendasi ke Dosen Pembimbingmu dengan percaya diri.</p></FadeIn>
+            <FadeIn className="text-center mb-16"><h2 className="text-3xl font-extrabold tracking-tight">3 Langkah Menuju Wisuda</h2></FadeIn>
+            <div className="grid gap-8 md:grid-cols-3 relative">
+              {/* Garis penghubung background untuk desktop */}
+              <div className="hidden md:block absolute top-12 left-[15%] right-[15%] h-px bg-slate-700"></div>
+              
+              <FadeIn delay={200} className="text-center relative z-10 flex flex-col items-center">
+                <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center shadow-lg relative mb-6">
+                  <span className="absolute -top-3 -left-3 bg-green-500 text-white w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs">01</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-[#0f2a4a]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                </div>
+                <h3 className="text-xl font-bold mb-3">01. Input Data</h3>
+                <p className="text-slate-400 text-sm max-w-xs">Ketik program studimu dan topik apa yang paling kamu sukai.</p>
+              </FadeIn>
+              
+              <FadeIn delay={400} className="text-center relative z-10 flex flex-col items-center">
+                <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center shadow-lg relative mb-6">
+                  <span className="absolute -top-3 -left-3 bg-green-500 text-white w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs">02</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-[#0f2a4a]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                </div>
+                <h3 className="text-xl font-bold mb-3">02. Biar AI Bekerja</h3>
+                <p className="text-slate-400 text-sm max-w-xs">AI akan meracik kombinasi judul, metode, dan masalah relevan.</p>
+              </FadeIn>
+              
+              <FadeIn delay={600} className="text-center relative z-10 flex flex-col items-center">
+                <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center shadow-lg relative mb-6">
+                  <span className="absolute -top-3 -left-3 bg-green-500 text-white w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs">03</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-[#0f2a4a]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <h3 className="text-xl font-bold mb-3">03. Konsul & ACC</h3>
+                <p className="text-slate-400 text-sm max-w-xs">Bawa hasil rekomendasi ke Dosen Pembimbingmu dengan percaya diri.</p>
+              </FadeIn>
             </div>
           </div>
         </section>
         
         {/* LAYANAN & HARGA SECTION */}
-        <section id="layanan" className="py-24 bg-slate-50 border-t border-slate-200">
+        <section id="layanan" className="py-24 bg-[#F8FAFC]">
           <div className="mx-auto max-w-6xl px-6">
             <FadeIn className="text-center mb-16">
               <h2 className="text-3xl font-extrabold sm:text-4xl text-[#0f2a4a] tracking-tight">Pilihan Layanan Expert</h2>
               <p className="mt-4 text-slate-500 text-lg">Bimbingan penyusunan skripsi langsung dengan praktisi & akademisi terbaik</p>
             </FadeIn>
             
-            <div className="grid md:grid-cols-3 gap-8">
-              {packages.map((pkg: any, idx: number) => (
-                <FadeIn key={pkg.id || idx} delay={idx * 200} className={`bg-white rounded-3xl p-8 border ${idx === 1 ? 'border-green-500 shadow-xl shadow-green-100 relative scale-105' : 'border-slate-200'}`}>
-                  {idx === 1 && (
-                    <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-1 rounded-full text-xs font-bold tracking-wide">POPULAR</span>
-                  )}
-                  <h3 className="text-xl font-bold text-[#0f2a4a]">{pkg.name}</h3>
-                  <div className="mt-4 mb-6">
-                    <span className="text-4xl font-extrabold text-[#0f2a4a]">Rp{(pkg.price || 0).toLocaleString('id-ID')}</span>
-                  </div>
-                  <ul className="space-y-4 mb-8">
-                    {Array.isArray(pkg.features) ? pkg.features.map((feature: string, fIdx: number) => (
-                      <li key={fIdx} className="flex items-start gap-3 text-sm text-slate-600">
-                        <svg className="w-5 h-5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                        <span>{feature}</span>
-                      </li>
-                    )) : null}
-                  </ul>
-                  <Link href={`/dashboard?checkout=${pkg.id}`} className={`block w-full text-center py-3 rounded-xl font-bold transition-all ${idx === 1 ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-slate-100 text-[#0f2a4a] hover:bg-slate-200'}`}>
-                    Pesan Sekarang
-                  </Link>
-                </FadeIn>
-              ))}
+            <div className="grid md:grid-cols-3 gap-8 items-center">
+              {/* Paket 1 */}
+              <FadeIn delay={100} className="bg-white rounded-3xl p-8 border border-slate-200">
+                <h3 className="text-xl font-bold text-[#0f2a4a]">Paket Proposal</h3>
+                <div className="mt-4 mb-2">
+                  <span className="text-3xl font-extrabold text-[#0f2a4a]">Rp1.850.000</span>
+                </div>
+                <p className="text-slate-500 text-sm mb-6">Paket pengantar Bab 1 hingga Bab 3 untuk proposal skripsimu.</p>
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-start gap-3 text-sm text-slate-600"><svg className="w-5 h-5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Penyusunan Judul & Bab 1-3</li>
+                  <li className="flex items-start gap-3 text-sm text-slate-600"><svg className="w-5 h-5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Revisi Terstruktur</li>
+                </ul>
+                <Link href={`/dashboard`} className="block w-full text-center py-3 rounded-xl font-bold border border-slate-200 text-green-600 hover:bg-slate-50">Pesan Sekarang</Link>
+              </FadeIn>
+
+              {/* Paket 2 (Tengah, Highlight) */}
+              <FadeIn delay={200} className="bg-[#0f2a4a] rounded-3xl p-8 shadow-2xl relative scale-105 border-4 border-[#0f2a4a]">
+                <span className="absolute top-6 right-6 bg-amber-400 text-[#0f2a4a] px-3 py-1 rounded-full text-xs font-black tracking-wide">POPULAR</span>
+                <h3 className="text-xl font-bold text-white">Paket Seminar</h3>
+                <div className="mt-4 mb-2">
+                  <span className="text-4xl font-extrabold text-white">Rp4.200.000</span>
+                </div>
+                <p className="text-slate-300 text-sm mb-6 border-b border-slate-700 pb-6">Siap presentasi dengan Bab 4 dan 5 setelah seminar proposal.</p>
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-start gap-3 text-sm text-slate-200"><svg className="w-5 h-5 text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Olah Data Penelitian</li>
+                  <li className="flex items-start gap-3 text-sm text-slate-200"><svg className="w-5 h-5 text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Bab 4-5 & Persiapan Seminar</li>
+                </ul>
+                <Link href={`/dashboard`} className="block w-full text-center py-4 rounded-xl font-bold bg-green-500 text-white hover:bg-green-600 transition-colors">Pesan Sekarang</Link>
+              </FadeIn>
+
+              {/* Paket 3 */}
+              <FadeIn delay={300} className="bg-white rounded-3xl p-8 border border-slate-200">
+                <h3 className="text-xl font-bold text-[#0f2a4a]">Paket Complete</h3>
+                <div className="mt-4 mb-2">
+                  <span className="text-3xl font-extrabold text-[#0f2a4a]">Rp6.000.000</span>
+                </div>
+                <p className="text-slate-500 text-sm mb-6">Penyusunan lengkap dari Proposal hingga Skripsi Acc Dosen.</p>
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-start gap-3 text-sm text-slate-600"><svg className="w-5 h-5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Full Bab 1 sampai Bab 5</li>
+                  <li className="flex items-start gap-3 text-sm text-slate-600"><svg className="w-5 h-5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Siap Ujian & PPT Sidang</li>
+                </ul>
+                <Link href={`/dashboard`} className="block w-full text-center py-3 rounded-xl font-bold border border-slate-200 text-green-600 hover:bg-slate-50">Pesan Sekarang</Link>
+              </FadeIn>
             </div>
           </div>
         </section>
 
-        <section className="py-32 bg-white border-t border-slate-100">
-          <div className="mx-auto max-w-3xl px-6 text-center">
-            <FadeIn>
-              <h2 className="text-4xl font-extrabold text-[#0f2a4a] mb-6 tracking-tight">Sudah Siap Pakai Toga?</h2>
-              <Link href="/auth" className="inline-flex items-center gap-3 rounded-2xl bg-green-500 px-10 py-5 text-sm font-bold text-white shadow-xl hover:bg-green-600 uppercase tracking-wide">
+        <section className="py-24 bg-white">
+          <div className="mx-auto max-w-4xl px-6">
+            <FadeIn className="bg-[#F8FAFC] rounded-3xl p-10 text-center border border-slate-100 flex flex-col items-center">
+              <h2 className="text-3xl font-extrabold text-[#0f2a4a] mb-2 tracking-tight">Sudah Siap Pakai Toga? 🎓</h2>
+              <p className="text-slate-500 mb-8">Mulai perjalanan skripsimu sekarang. Gratis!</p>
+              <Link href="/auth" className="inline-flex items-center gap-3 rounded-xl bg-green-600 px-8 py-4 text-sm font-bold text-white shadow-lg shadow-green-600/20 hover:bg-green-700 uppercase tracking-wide transition-all hover:-translate-y-1">
                 Daftar Akun Gratis
               </Link>
+              <p className="text-xs text-slate-400 mt-4">Tidak perlu kartu kredit</p>
             </FadeIn>
           </div>
         </section>
