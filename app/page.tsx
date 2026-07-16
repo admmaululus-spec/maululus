@@ -1,3 +1,4 @@
+// app/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -134,62 +135,29 @@ export default function Home() {
                 
                 <div className="hidden sm:block h-10 w-px bg-slate-200"></div>
 
-     </div>
+                <div>
+                  <p className="text-xs text-slate-500 font-medium mb-2">Dipakai mahasiswa dari</p>
+                  <div className="flex items-center gap-3 text-sm font-black text-slate-400">
+                    <span className="text-amber-500">UB</span>
+                    <span className="text-blue-600">ITS</span>
+                    <span className="text-blue-800">UNAIR</span>
+                    <span className="text-indigo-900">UNDIP</span>
+                    <span className="text-yellow-500">UNNES</span>
+                    <span className="text-xs font-semibold bg-slate-100 px-2 py-1 rounded-md text-slate-600">+150 Kampus lainnya</span>
+                  </div>
+                </div>
+              </div>
             </FadeIn>
 
-            {/* Kolom Kanan: CSS Dashboard Mockup (TANPA GAMBAR FILE) */}
+            {/* Kolom Kanan: Mockup Dashboard (Memanggil Gambar) */}
             <FadeIn delay={200} className="relative z-10 w-full flex justify-center lg:justify-end">
-              <div className="relative w-full max-w-[550px] aspect-[4/3] rounded-2xl bg-[#F4F7FE] shadow-2xl border border-slate-200/60 overflow-hidden flex transform hover:-translate-y-2 transition-transform duration-500">
+              <div className="relative w-full max-w-[600px] flex transform hover:-translate-y-2 transition-transform duration-500">
                  
-                 {/* Sidebar Mockup */}
-                 <div className="w-1/4 bg-[#0B1525] p-4 flex flex-col gap-3">
-                   <div className="flex items-center gap-2 mb-4">
-                     <div className="h-5 w-5 bg-blue-500 rounded-md"></div>
-                     <div className="h-3 w-16 bg-white/80 rounded"></div>
-                   </div>
-                   <div className="h-2.5 w-full bg-blue-600 rounded"></div>
-                   <div className="h-2.5 w-5/6 bg-white/10 rounded"></div>
-                   <div className="h-2.5 w-4/5 bg-white/10 rounded"></div>
-                   <div className="h-2.5 w-full bg-white/10 rounded"></div>
-                   
-                   <div className="mt-auto bg-[#152336] rounded-lg p-3">
-                      <div className="h-2 w-10 bg-white/40 rounded mb-2"></div>
-                      <div className="h-6 w-full bg-blue-500 rounded-md"></div>
-                   </div>
-                 </div>
-
-                 {/* Main Content Mockup */}
-                 <div className="flex-1 p-5 flex flex-col gap-4">
-                    {/* Header bar */}
-                    <div className="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-slate-100">
-                       <div className="h-3 w-24 bg-slate-200 rounded"></div>
-                       <div className="h-6 w-6 bg-slate-200 rounded-full"></div>
-                    </div>
-
-                    {/* Cards */}
-                    <div className="grid grid-cols-2 gap-3">
-                       <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100 flex flex-col gap-3">
-                         <div className="h-2.5 w-16 bg-slate-200 rounded"></div>
-                         <div className="h-6 w-20 bg-green-100 rounded"></div>
-                       </div>
-                       <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100 flex flex-col gap-3">
-                         <div className="h-2.5 w-16 bg-slate-200 rounded"></div>
-                         <div className="h-6 w-20 bg-amber-100 rounded"></div>
-                       </div>
-                    </div>
-
-                    {/* Main Area */}
-                    <div className="flex-1 bg-white rounded-xl p-4 shadow-sm border border-slate-100 flex flex-col gap-3">
-                       <div className="h-3 w-32 bg-slate-200 rounded mb-1"></div>
-                       <div className="h-2.5 w-full bg-slate-50 rounded"></div>
-                       <div className="h-2.5 w-5/6 bg-slate-50 rounded"></div>
-                       <div className="h-2.5 w-4/6 bg-slate-50 rounded"></div>
-                       
-                       <div className="mt-4 flex-1 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-center">
-                          <div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-blue-500 animate-spin"></div>
-                       </div>
-                    </div>
-                 </div>
+                 <img 
+                    src="/mockup-dashboard.png" 
+                    alt="Mockup Dashboard Maululus" 
+                    className="w-full h-auto object-contain drop-shadow-2xl rounded-2xl"
+                 />
 
               </div>
               
