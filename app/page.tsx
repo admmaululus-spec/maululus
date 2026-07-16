@@ -154,7 +154,7 @@ export default function Home() {
               <div className="relative w-full max-w-[600px] flex transform hover:-translate-y-2 transition-transform duration-500">
                  
                  <img 
-                    src="/mockup-dashboard.png" 
+                    src="/mockup-dashboard2.png" 
                     alt="Mockup Dashboard Maululus" 
                     className="w-full h-auto object-contain drop-shadow-2xl rounded-2xl"
                  />
