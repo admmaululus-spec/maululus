@@ -6,18 +6,22 @@ import TabProyek from './TabProyek';
 import TabAiTools from './TabAiTools';
 import TabDokumen from './TabDokumen';
 import TabJurnal from './TabJurnal';
-import TabPengaturan from './TabPengaturan';
 import TabExpert from './TabExpert';
 import { TabKoin, TabTopup } from './BillingTabs';
 
-// Tambahkan userId pada props jika sewaktu-waktu dibutuhkan komponen child
-export default function CenterContent({ activeMenu, setActiveMenu, setIsSidebarOpen, userName, userEmail, userWhatsapp, koin, riwayatList, premiumProjects, handleBukaKunci, isProcessing, router, userId }: any) {
+// Menambahkan props baru: userNama, transactions, handleSaveProfile, isSavingProfile
+export default function CenterContent({ 
+  activeMenu, setActiveMenu, setIsSidebarOpen, userName, userEmail, 
+  userWhatsapp, userNama, koin, riwayatList, premiumProjects, transactions, 
+  handleBukaKunci, handleSaveProfile, isProcessing, isSavingProfile, router, userId 
+}: any) {
   
   const dokumenList = riwayatList.filter((item: any) => !item.tool_name);
   const jurnalRefList = riwayatList.filter((item: any) => item.tool_name);
   const activeProject = premiumProjects && premiumProjects.length > 0 ? premiumProjects[0] : null;
 
-  const validMenus = ['dashboard', 'proyek', 'ai-tools', 'dokumen', 'jurnal', 'pengaturan', 'expert', 'koin', 'topup'];
+  // Menambahkan transaksi, notifikasi, dan bantuan ke daftar menu valid
+  const validMenus = ['dashboard', 'proyek', 'ai-tools', 'dokumen', 'jurnal', 'pengaturan', 'expert', 'koin', 'topup', 'transaksi', 'notifikasi', 'bantuan'];
 
   return (
     <main className="flex-1 flex flex-col h-full overflow-hidden">
@@ -32,24 +36,25 @@ export default function CenterContent({ activeMenu, setActiveMenu, setIsSidebarO
           </div>
         </div>
         <div className="flex items-center gap-4">
-          {/* UX Fix: Tombol Koin sekarang memicu Tab Topup instan tanpa reload halaman */}
           <button onClick={() => setActiveMenu('topup')} className="hidden md:flex items-center gap-2 bg-amber-50 border border-amber-100 px-4 py-2 rounded-full cursor-pointer hover:bg-amber-100 transition-colors">
             <span className="text-amber-500 text-lg">🪙</span>
             <span className="text-sm font-bold text-slate-800">{koin} Koin</span>
           </button>
-          <button className="relative text-slate-400 hover:text-slate-600">
+          
+          {/* Ikon Lonceng sekarang bisa diklik untuk membuka Notifikasi */}
+          <button onClick={() => setActiveMenu('notifikasi')} className="relative text-slate-400 hover:text-slate-600 transition-colors">
             <BellIcon />
             <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 border-2 border-white rounded-full"></span>
           </button>
-          <div className="hidden md:flex items-center gap-2 ml-2 pl-4 border-l border-slate-200">
+          
+          <div className="hidden md:flex items-center gap-2 ml-2 pl-4 border-l border-slate-200 cursor-pointer" onClick={() => setActiveMenu('pengaturan')}>
              <div className="h-8 w-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm">{userName.charAt(0)}</div>
-             <span className="text-sm font-semibold text-slate-700">{userName}</span>
+             <span className="text-sm font-semibold text-slate-700 hover:text-blue-600 transition-colors">{userName}</span>
           </div>
         </div>
       </header>
 
       <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#F8FAFC]">
-        {/* PERBAIKAN: Melempar premiumProjects (array) dan setActiveMenu ke komponen terkait */}
         {activeMenu === 'dashboard' && <TabDashboard riwayatList={riwayatList} premiumProjects={premiumProjects} activeProject={activeProject} router={router} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} setActiveMenu={setActiveMenu} />}
         {activeMenu === 'proyek' && <TabProyek premiumProjects={premiumProjects} activeProject={activeProject} setActiveMenu={setActiveMenu} />}
         {activeMenu === 'expert' && <TabExpert riwayatList={riwayatList} koin={koin} userId={userId} />}
@@ -59,8 +64,157 @@ export default function CenterContent({ activeMenu, setActiveMenu, setIsSidebarO
         {activeMenu === 'jurnal' && <TabJurnal jurnalRefList={jurnalRefList} router={router} setActiveMenu={setActiveMenu} />}
         {activeMenu === 'koin' && <TabKoin koin={koin} riwayatList={riwayatList} setActiveMenu={setActiveMenu} />}
         {activeMenu === 'topup' && <TabTopup koin={koin} />}
-        {activeMenu === 'pengaturan' && <TabPengaturan userName={userName} userEmail={userEmail} userWhatsapp={userWhatsapp} />}
         
+        {/* ========================================= */}
+        {/* TAB TRANSAKSI */}
+        {/* ========================================= */}
+        {activeMenu === 'transaksi' && (
+          <div className="animate-in fade-in duration-500 max-w-5xl mx-auto">
+            <div className="mb-8">
+              <h2 className="text-2xl font-extrabold text-slate-800">Riwayat Transaksi</h2>
+              <p className="text-slate-500 text-sm mt-1">Lacak pembelian koin dan layanan expert Anda di sini.</p>
+            </div>
+            
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+              <table className="w-full text-left text-sm text-slate-600">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px]">Tanggal</th>
+                    <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px]">Paket / Layanan</th>
+                    <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px]">Nominal</th>
+                    <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px]">Status Koin</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {transactions && transactions.length > 0 ? transactions.map((trx: any) => (
+                    <tr key={trx.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-slate-500">{new Date(trx.created_at).toLocaleString('id-ID')}</td>
+                      <td className="px-6 py-4 font-bold text-slate-800">
+                        {trx.paket_nama}
+                        <div className="text-[10px] font-normal text-slate-400 mt-0.5">{trx.metode}</div>
+                      </td>
+                      <td className="px-6 py-4 font-bold text-slate-800">Rp{trx.harga_rp.toLocaleString('id-ID')}</td>
+                      <td className="px-6 py-4">
+                        <span className="bg-green-100 text-green-700 border border-green-200 px-2.5 py-1 rounded-md text-[10px] font-bold">
+                          +{trx.koin_jumlah} Koin
+                        </span>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400">Belum ada riwayat transaksi top up.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================= */}
+        {/* TAB PENGATURAN PROFIL */}
+        {/* ========================================= */}
+        {activeMenu === 'pengaturan' && (
+          <div className="animate-in fade-in duration-500 max-w-3xl mx-auto">
+            <div className="mb-8">
+              <h2 className="text-2xl font-extrabold text-slate-800">Pengaturan Akun</h2>
+              <p className="text-slate-500 text-sm mt-1">Kelola informasi profil dan kontak WhatsApp Anda.</p>
+            </div>
+
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200">
+              <div className="flex items-center gap-5 mb-8 pb-8 border-b border-slate-100">
+                <div className="w-20 h-20 bg-[#0B1525] text-white text-3xl font-bold rounded-full flex items-center justify-center uppercase shadow-md shrink-0">
+                  {userName.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-800">{userName}</h3>
+                  <p className="text-slate-500 text-sm">Mahasiswa Akhir</p>
+                </div>
+              </div>
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                handleSaveProfile(formData.get('nama') as string, formData.get('whatsapp') as string);
+              }} className="space-y-6">
+                
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Email Address</label>
+                  <div className="relative">
+                    <input type="email" value={userEmail} disabled className="w-full bg-slate-50 border border-slate-200 text-slate-600 font-bold rounded-xl px-4 py-3 opacity-70 cursor-not-allowed" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2.5 py-1 rounded-md">TERVERIFIKASI</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Nama Lengkap</label>
+                  <input type="text" name="nama" defaultValue={userNama} placeholder="Masukkan nama panggilan / lengkap" className="w-full bg-white border border-slate-200 text-slate-800 font-bold rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all" />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">WhatsApp</label>
+                  <input type="tel" name="whatsapp" defaultValue={userWhatsapp} placeholder="Contoh: 08123456789" className="w-full bg-white border border-slate-200 text-slate-800 font-bold rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all" />
+                </div>
+
+                <div className="pt-4 flex justify-end">
+                  <button type="submit" disabled={isSavingProfile} className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-md shadow-blue-600/20 active:scale-95 disabled:opacity-70">
+                    {isSavingProfile ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================= */}
+        {/* TAB NOTIFIKASI */}
+        {/* ========================================= */}
+        {activeMenu === 'notifikasi' && (
+          <div className="animate-in fade-in duration-500 max-w-3xl mx-auto">
+            <div className="mb-8">
+              <h2 className="text-2xl font-extrabold text-slate-800">Notifikasi</h2>
+              <p className="text-slate-500 text-sm mt-1">Pembaruan sistem dan info promo terbaru.</p>
+            </div>
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 flex gap-4 items-start">
+                <div className="bg-blue-600 text-white p-2 rounded-full shrink-0">🔔</div>
+                <div>
+                  <h4 className="font-bold text-blue-900">Selamat datang di Maululus!</h4>
+                  <p className="text-sm text-blue-800/80 mt-1">Platform AI Skripsi #1 di Indonesia siap membantu Anda lulus lebih cepat. Dapatkan koin gratis untuk mencoba fitur kami.</p>
+                  <span className="text-[10px] text-blue-500 font-bold mt-2 block">Baru saja</span>
+                </div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 flex gap-4 items-start">
+                <div className="bg-slate-100 text-slate-500 p-2 rounded-full shrink-0">🚀</div>
+                <div>
+                  <h4 className="font-bold text-slate-800">Update Sistem V2.0</h4>
+                  <p className="text-sm text-slate-500 mt-1">Sistem pembayaran otomatis telah diaktifkan. Anda kini bisa langsung Top Up Koin 24/7 dan koin akan otomatis masuk!</p>
+                  <span className="text-[10px] text-slate-400 font-bold mt-2 block">Hari ini</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================= */}
+        {/* TAB BANTUAN */}
+        {/* ========================================= */}
+        {activeMenu === 'bantuan' && (
+          <div className="animate-in fade-in duration-500 max-w-3xl mx-auto">
+            <div className="mb-8">
+              <h2 className="text-2xl font-extrabold text-slate-800">Pusat Bantuan</h2>
+              <p className="text-slate-500 text-sm mt-1">Punya kendala? Tim kami siap membantu.</p>
+            </div>
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 text-center">
+              <div className="text-5xl mb-4">💬</div>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">Hubungi Customer Service</h3>
+              <p className="text-slate-500 text-sm mb-8 max-w-md mx-auto">Jika Anda mengalami kendala pembayaran, penggunaan AI, atau ingin konsultasi terkait Expert Assistance, silakan hubungi admin kami via WhatsApp.</p>
+              <a href="https://wa.me/6281234567890" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold px-8 py-3.5 rounded-xl transition-all shadow-md active:scale-95">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z" clipRule="evenodd" /></svg>
+                Chat WhatsApp Admin
+              </a>
+            </div>
+          </div>
+        )}
+
         {!validMenus.includes(activeMenu) && (
           <div className="flex flex-col items-center justify-center h-full text-slate-400">
              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="w-20 h-20 mb-4 opacity-20"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m11.25 14.25a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9c0-1.242.75-2.25 1.875-2.25h.75m10.5 12.75h-3m-3 0h-3m-3 0H6.75" /></svg>
