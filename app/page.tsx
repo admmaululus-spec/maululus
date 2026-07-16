@@ -1,53 +1,58 @@
-// app/page.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/app/lib/supabase';
 import FadeIn from './components/FadeIn';
 import ServicesSection from './components/home/ServicesSection';
 import Footer from './components/home/Footer';
-import Image from 'next/image';
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
+const FALLBACK_PACKAGES = [
+  { id: 1, name: 'Paket Proposal', price: 1850000, features: ['Penyusunan Judul & Bab 1-3', 'Revisi Terstruktur'] },
+  { id: 2, name: 'Paket Seminar', price: 4200000, features: ['Olah Data Penelitian', 'Bab 4-5 & Persiapan Seminar'] },
+  { id: 3, name: 'Paket Complete', price: 6000000, features: ['Full Bab 1 sampai Bab 5', 'Siap Ujian & PPT Sidang'] },
+];
 
-async function getExpertPackages(supabase: any) {
-  try {
-    const { data, error } = await supabase
-      .from('expert_packages')
-      .select('*')
-      .eq('is_active', true)
-      .order('price', { ascending: true });
-    
-    if (error) throw error;
-    return data || [];
-  } catch (e) {
-    return [
-      { id: 1, name: 'Paket Proposal', price: 1850000, features: ['Penyusunan Judul & Bab 1-3', 'Revisi Terstruktur'] },
-      { id: 2, name: 'Paket Seminar', price: 4200000, features: ['Olah Data Penelitian', 'Bab 4-5 & Persiapan Seminar'] },
-    ];
-  }
-}
+export default function Home() {
+  const router = useRouter();
+  const [packages, setPackages] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-export default async function Home() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get(name: string) { return cookieStore.get(name)?.value; } } }
-  );
+  useEffect(() => {
+    const initData = async () => {
+      // 1. Cek Sesi User & Redirect
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const ADMIN_EMAILS = ['vianeyricky@gmail.com', 'emailkamu@gmail.com']; 
+        if (session.user.email && ADMIN_EMAILS.includes(session.user.email)) {
+          router.replace('/admin');
+          return;
+        } else {
+          router.replace('/dashboard');
+          return;
+        }
+      }
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    const ADMIN_EMAILS = ['vianeyricky@gmail.com', 'emailkamu@gmail.com']; 
-    if (user.email && ADMIN_EMAILS.includes(user.email)) {
-      redirect('/admin');
-    } else {
-      redirect('/dashboard');
-    }
-  }
+      // 2. Ambil Data Paket dari Browser (Agar lolos limit 3MB Cloudflare)
+      try {
+        const { data, error } = await supabase
+          .from('expert_packages')
+          .select('*')
+          .eq('is_active', true)
+          .order('price', { ascending: true });
+        
+        if (error) throw error;
+        setPackages(data && data.length > 0 ? data : FALLBACK_PACKAGES);
+      } catch (e) {
+        setPackages(FALLBACK_PACKAGES);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const packages = await getExpertPackages(supabase);
+    initData();
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-[#0f2a4a] selection:bg-green-200 overflow-x-hidden">
@@ -117,7 +122,6 @@ export default async function Home() {
               <div className="mt-12 flex flex-col sm:flex-row items-start sm:items-center gap-6 border-t border-slate-200 pt-8 w-full">
                 <div className="flex items-center gap-3">
                   <div className="flex text-amber-400">
-                    {/* 5 Bintang SVG */}
                     {[...Array(5)].map((_, i) => (
                       <svg key={i} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" /></svg>
                     ))}
@@ -133,7 +137,6 @@ export default async function Home() {
                 <div>
                   <p className="text-xs text-slate-500 font-medium mb-2">Dipakai mahasiswa dari</p>
                   <div className="flex items-center gap-3 text-sm font-black text-slate-400">
-                    {/* Placeholder teks kampus sesuai gambar */}
                     <span className="text-amber-500">UB</span>
                     <span className="text-blue-600">ITS</span>
                     <span className="text-blue-800">UNAIR</span>
@@ -145,17 +148,60 @@ export default async function Home() {
               </div>
             </FadeIn>
 
-            {/* Kolom Kanan: Mockup Dashboard */}
+            {/* Kolom Kanan: CSS Dashboard Mockup (TANPA GAMBAR FILE) */}
             <FadeIn delay={200} className="relative z-10 w-full flex justify-center lg:justify-end">
-              <div className="relative w-full max-w-[600px] aspect-[4/3] rounded-2xl bg-white shadow-2xl border border-slate-100 overflow-hidden flex items-center justify-center">
-                 {/* 
-                   Ganti src dengan path gambar mockup Anda jika sudah ada di folder public
-                   Contoh: <Image src="/mockup-dashboard.png" fill className="object-cover" alt="Dashboard" />
-                 */}
-                 <div className="text-center p-8">
-                    <p className="text-slate-400 font-bold mb-2">Area Gambar Mockup</p>
-                    <p className="text-sm text-slate-500">Simpan gambar UI dashboard Anda di folder <code>public/</code> dengan nama <code className="text-blue-500">mockup-dashboard.png</code> dan panggil menggunakan tag img di sini.</p>
+              <div className="relative w-full max-w-[550px] aspect-[4/3] rounded-2xl bg-[#F4F7FE] shadow-2xl border border-slate-200/60 overflow-hidden flex transform hover:-translate-y-2 transition-transform duration-500">
+                 
+                 {/* Sidebar Mockup */}
+                 <div className="w-1/4 bg-[#0B1525] p-4 flex flex-col gap-3">
+                   <div className="flex items-center gap-2 mb-4">
+                     <div className="h-5 w-5 bg-blue-500 rounded-md"></div>
+                     <div className="h-3 w-16 bg-white/80 rounded"></div>
+                   </div>
+                   <div className="h-2.5 w-full bg-blue-600 rounded"></div>
+                   <div className="h-2.5 w-5/6 bg-white/10 rounded"></div>
+                   <div className="h-2.5 w-4/5 bg-white/10 rounded"></div>
+                   <div className="h-2.5 w-full bg-white/10 rounded"></div>
+                   
+                   <div className="mt-auto bg-[#152336] rounded-lg p-3">
+                      <div className="h-2 w-10 bg-white/40 rounded mb-2"></div>
+                      <div className="h-6 w-full bg-blue-500 rounded-md"></div>
+                   </div>
                  </div>
+
+                 {/* Main Content Mockup */}
+                 <div className="flex-1 p-5 flex flex-col gap-4">
+                    {/* Header bar */}
+                    <div className="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-slate-100">
+                       <div className="h-3 w-24 bg-slate-200 rounded"></div>
+                       <div className="h-6 w-6 bg-slate-200 rounded-full"></div>
+                    </div>
+
+                    {/* Cards */}
+                    <div className="grid grid-cols-2 gap-3">
+                       <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100 flex flex-col gap-3">
+                         <div className="h-2.5 w-16 bg-slate-200 rounded"></div>
+                         <div className="h-6 w-20 bg-green-100 rounded"></div>
+                       </div>
+                       <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100 flex flex-col gap-3">
+                         <div className="h-2.5 w-16 bg-slate-200 rounded"></div>
+                         <div className="h-6 w-20 bg-amber-100 rounded"></div>
+                       </div>
+                    </div>
+
+                    {/* Main Area */}
+                    <div className="flex-1 bg-white rounded-xl p-4 shadow-sm border border-slate-100 flex flex-col gap-3">
+                       <div className="h-3 w-32 bg-slate-200 rounded mb-1"></div>
+                       <div className="h-2.5 w-full bg-slate-50 rounded"></div>
+                       <div className="h-2.5 w-5/6 bg-slate-50 rounded"></div>
+                       <div className="h-2.5 w-4/6 bg-slate-50 rounded"></div>
+                       
+                       <div className="mt-4 flex-1 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-center">
+                          <div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-blue-500 animate-spin"></div>
+                       </div>
+                    </div>
+                 </div>
+
               </div>
               
               {/* Background Ornamen */}
@@ -170,7 +216,6 @@ export default async function Home() {
           <div className="mx-auto max-w-7xl px-6 relative z-10">
             <FadeIn className="text-center mb-16"><h2 className="text-3xl font-extrabold tracking-tight">3 Langkah Menuju Wisuda</h2></FadeIn>
             <div className="grid gap-8 md:grid-cols-3 relative">
-              {/* Garis penghubung background untuk desktop */}
               <div className="hidden md:block absolute top-12 left-[15%] right-[15%] h-px bg-slate-700"></div>
               
               <FadeIn delay={200} className="text-center relative z-10 flex flex-col items-center">
@@ -211,50 +256,53 @@ export default async function Home() {
               <p className="mt-4 text-slate-500 text-lg">Bimbingan penyusunan skripsi langsung dengan praktisi & akademisi terbaik</p>
             </FadeIn>
             
-            <div className="grid md:grid-cols-3 gap-8 items-center">
-              {/* Paket 1 */}
-              <FadeIn delay={100} className="bg-white rounded-3xl p-8 border border-slate-200">
-                <h3 className="text-xl font-bold text-[#0f2a4a]">Paket Proposal</h3>
-                <div className="mt-4 mb-2">
-                  <span className="text-3xl font-extrabold text-[#0f2a4a]">Rp1.850.000</span>
-                </div>
-                <p className="text-slate-500 text-sm mb-6">Paket pengantar Bab 1 hingga Bab 3 untuk proposal skripsimu.</p>
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-start gap-3 text-sm text-slate-600"><svg className="w-5 h-5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Penyusunan Judul & Bab 1-3</li>
-                  <li className="flex items-start gap-3 text-sm text-slate-600"><svg className="w-5 h-5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Revisi Terstruktur</li>
-                </ul>
-                <Link href={`/dashboard`} className="block w-full text-center py-3 rounded-xl font-bold border border-slate-200 text-green-600 hover:bg-slate-50">Pesan Sekarang</Link>
-              </FadeIn>
-
-              {/* Paket 2 (Tengah, Highlight) */}
-              <FadeIn delay={200} className="bg-[#0f2a4a] rounded-3xl p-8 shadow-2xl relative scale-105 border-4 border-[#0f2a4a]">
-                <span className="absolute top-6 right-6 bg-amber-400 text-[#0f2a4a] px-3 py-1 rounded-full text-xs font-black tracking-wide">POPULAR</span>
-                <h3 className="text-xl font-bold text-white">Paket Seminar</h3>
-                <div className="mt-4 mb-2">
-                  <span className="text-4xl font-extrabold text-white">Rp4.200.000</span>
-                </div>
-                <p className="text-slate-300 text-sm mb-6 border-b border-slate-700 pb-6">Siap presentasi dengan Bab 4 dan 5 setelah seminar proposal.</p>
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-start gap-3 text-sm text-slate-200"><svg className="w-5 h-5 text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Olah Data Penelitian</li>
-                  <li className="flex items-start gap-3 text-sm text-slate-200"><svg className="w-5 h-5 text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Bab 4-5 & Persiapan Seminar</li>
-                </ul>
-                <Link href={`/dashboard`} className="block w-full text-center py-4 rounded-xl font-bold bg-green-500 text-white hover:bg-green-600 transition-colors">Pesan Sekarang</Link>
-              </FadeIn>
-
-              {/* Paket 3 */}
-              <FadeIn delay={300} className="bg-white rounded-3xl p-8 border border-slate-200">
-                <h3 className="text-xl font-bold text-[#0f2a4a]">Paket Complete</h3>
-                <div className="mt-4 mb-2">
-                  <span className="text-3xl font-extrabold text-[#0f2a4a]">Rp6.000.000</span>
-                </div>
-                <p className="text-slate-500 text-sm mb-6">Penyusunan lengkap dari Proposal hingga Skripsi Acc Dosen.</p>
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-start gap-3 text-sm text-slate-600"><svg className="w-5 h-5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Full Bab 1 sampai Bab 5</li>
-                  <li className="flex items-start gap-3 text-sm text-slate-600"><svg className="w-5 h-5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Siap Ujian & PPT Sidang</li>
-                </ul>
-                <Link href={`/dashboard`} className="block w-full text-center py-3 rounded-xl font-bold border border-slate-200 text-green-600 hover:bg-slate-50">Pesan Sekarang</Link>
-              </FadeIn>
-            </div>
+            {isLoading ? (
+               <div className="text-center py-12 text-slate-500 animate-pulse font-bold">Memuat daftar paket layanan...</div>
+            ) : (
+              <div className="grid md:grid-cols-3 gap-8 items-center">
+                {packages.map((pkg: any, idx: number) => (
+                  <FadeIn key={pkg.id || idx} delay={idx * 150} className={
+                    idx === 1 
+                      ? "bg-[#0f2a4a] rounded-3xl p-8 shadow-2xl relative scale-105 border-4 border-[#0f2a4a]" 
+                      : "bg-white rounded-3xl p-8 border border-slate-200"
+                  }>
+                    {idx === 1 && (
+                      <span className="absolute top-6 right-6 bg-amber-400 text-[#0f2a4a] px-3 py-1 rounded-full text-xs font-black tracking-wide">POPULAR</span>
+                    )}
+                    <h3 className={`text-xl font-bold ${idx === 1 ? 'text-white' : 'text-[#0f2a4a]'}`}>{pkg.name}</h3>
+                    
+                    <div className="mt-4 mb-2">
+                      <span className={`text-3xl font-extrabold ${idx === 1 ? 'text-white' : 'text-[#0f2a4a]'}`}>
+                        Rp{(pkg.price || 0).toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                    
+                    <p className={`text-sm mb-6 pb-6 ${idx === 1 ? 'text-slate-300 border-b border-slate-700' : 'text-slate-500 border-b border-slate-100'}`}>
+                      {idx === 0 && "Paket pengantar Bab 1 hingga Bab 3 untuk proposal skripsimu."}
+                      {idx === 1 && "Siap presentasi dengan Bab 4 dan 5 setelah seminar proposal."}
+                      {idx === 2 && "Penyusunan lengkap dari Proposal hingga Skripsi Acc Dosen."}
+                    </p>
+                    
+                    <ul className="space-y-4 mb-8">
+                      {Array.isArray(pkg.features) ? pkg.features.map((feature: string, fIdx: number) => (
+                        <li key={fIdx} className={`flex items-start gap-3 text-sm ${idx === 1 ? 'text-slate-200' : 'text-slate-600'}`}>
+                          <svg className={`w-5 h-5 shrink-0 ${idx === 1 ? 'text-green-400' : 'text-green-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> 
+                          {feature}
+                        </li>
+                      )) : null}
+                    </ul>
+                    
+                    <Link href={`/dashboard`} className={`block w-full text-center py-4 rounded-xl font-bold transition-colors ${
+                      idx === 1 
+                        ? 'bg-green-500 text-white hover:bg-green-600' 
+                        : 'border border-slate-200 text-green-600 hover:bg-slate-50'
+                    }`}>
+                      Pesan Sekarang
+                    </Link>
+                  </FadeIn>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
