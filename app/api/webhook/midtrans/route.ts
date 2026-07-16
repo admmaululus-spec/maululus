@@ -1,6 +1,6 @@
+// app/api/webhook/midtrans/route.ts
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import crypto from 'crypto'; // TAMBAHAN: Modul untuk verifikasi keamanan
 
 export const runtime = 'edge';
 
@@ -9,10 +9,16 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { transaction_status, order_id, gross_amount, status_code, signature_key, custom_field1, custom_field2, payment_type, customer_details } = body;
 
-    // 🔴 1. VERIFIKASI SIGNATURE MIDTRANS (SANGAT PENTING!)
-    // Mencegah hacker memalsukan request lunas
+    // 🔴 1. VERIFIKASI SIGNATURE MENGGUNAKAN WEB CRYPTO API (EDGE COMPATIBLE)
     const serverKey = process.env.MIDTRANS_SERVER_KEY || '';
-    const hash = crypto.createHash('sha512').update(order_id + status_code + gross_amount + serverKey).digest('hex');
+    const inputString = order_id + status_code + gross_amount + serverKey;
+    
+    // Proses Hashing SHA-512 khusus untuk Edge Runtime
+    const encoder = new TextEncoder();
+    const data = encoder.encode(inputString);
+    const hashBuffer = await crypto.subtle.digest('SHA-512', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
     if (hash !== signature_key) {
       console.error("Akses Webhook Ditolak: Signature Tidak Valid!");

@@ -1,3 +1,4 @@
+// app/dashboard/components/TabExpert.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
@@ -16,7 +17,7 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
     const fetchData = async () => {
       const [pkgRes, rateRes] = await Promise.all([
         supabase.from('expert_packages').select('*').order('harga', { ascending: true }),
-        supabase.from('app_settings').select('value').eq('key', 'koin_rate').single()
+        supabase.from('app_settings').select('value').eq('key', 'koin_rate').maybeSingle()
       ]);
       if (pkgRes.data) setPackages(pkgRes.data);
       if (rateRes.data) setKoinRate(parseInt(rateRes.data.value));
@@ -40,6 +41,7 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
 
       const orderId = crypto.randomUUID();
 
+      // 1. KIRIM DATA KE API PAYMENT (Termasuk Koin yang Dipakai untuk Diskon)
       const res = await fetch('/api/payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -49,62 +51,30 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
           first_name: form.nama,
           email: session.user.email,
           phone: form.no_whatsapp,
-          item_name: selectedPaket.nama
+          item_name: selectedPaket.nama,
+          koin_dipakai: useKoin ? koinTerpotong : 0 // 👈 Diskon Koin dikirim ke API
         })
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
+      // 2. TAMPILKAN POP-UP MIDTRANS
       (window as any).snap.pay(data.token, {
         onSuccess: async function(result: any) {
-          if (useKoin && koinTerpotong > 0) {
-            await supabase.from('users_data').update({ koin: koin - koinTerpotong }).eq('id', session.user.id);
-          }
+          // KITA TIDAK LAGI MELAKUKAN QUERY DATABASE DARI SINI
+          // Pengurangan koin & pembukaan akses Expert sekarang otomatis dilakukan oleh Webhook secara aman.
 
-          // Catat transaksi
-          await supabase.from('transactions').insert({
-            user_id: session.user.id,
-            user_email: session.user.email,
-            paket_nama: selectedPaket.nama,
-            koin_jumlah: useKoin ? -(koinTerpotong) : 0, 
-            harga_rp: finalPrice,
-            metode: 'Midtrans Gateway',
-            status: 'SUCCESS'
-          });
+          alert("Pembayaran Lunas & Proyek Berhasil Dibuat! Kamu akan diarahkan ke WhatsApp Admin.");
 
-          // Insert ke Proyek (Sekarang dengan Error Handling Kuat)
-          const { error: projectError } = await supabase.from('premium_projects').insert({
-            id: orderId,
-            user_id: session.user.id,
-            user_email: session.user.email,
-            judul: form.judul,
-            paket: selectedPaket.nama,
-            expert: 'Menunggu Assign Admin',
-            nama_lengkap: form.nama,
-            nim: form.nim,
-            universitas: form.univ,
-            jurusan: form.jurusan,
-            no_whatsapp: form.no_whatsapp,
-            progress: 0,
-            is_active: true,
-            checklist: [] // Tipe JSONB yang ada di Supabase
-          });
-
-          if (projectError) {
-            console.error("Gagal simpan proyek:", projectError);
-            alert(`PENTING: Pembayaran berhasil, tapi terjadi error simpan data (${projectError.message}). Harap lapor ke admin segera!`);
-          } else {
-            alert("Pembayaran Lunas & Proyek Berhasil Dibuat! Kamu akan diarahkan ke WhatsApp Admin.");
-          }
-
-          // Redirect ke WhatsApp
+          // Redirect ke WhatsApp Admin
           const waNumber = '6285815999953';
           const waMessage = encodeURIComponent(`Halo Admin Maululus, pesanan Expert Assistance atas nama *${form.nama}* telah berhasil dibayar.\n\n*Paket:* ${selectedPaket.nama}\n*Order ID:* ${orderId}\n\nMohon segera diproses ya!`);
           window.location.href = `https://wa.me/${waNumber}?text=${waMessage}`;
         },
         onPending: function(result: any) {
           alert("Menunggu pembayaran Anda diselesaikan!");
+          setLoading(false);
         },
         onError: function(result: any) {
           alert("Pembayaran gagal!");
@@ -138,13 +108,13 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
           <div key={pkg.id} className={`bg-white border border-slate-200 rounded-3xl p-8 shadow-sm flex flex-col justify-between hover:border-emerald-200 transition-all z-10${idx === 1 ? 'bg-[#0B1525] border-blue-900 shadow-xl transform lg:-translate-y-4'  : ''}`}>
              <div>
                <div className="flex items-center justify-between mb-2">
-                 <h3 className={`text-lg font-bold ${idx === 1 ? 'text-black' : 'text-slate-800'}`}>{pkg.nama}</h3>
+                 <h3 className={`text-lg font-bold ${idx === 1 ? 'text-white' : 'text-slate-800'}`}>{pkg.nama}</h3>
                  {idx === 1 && <span className="bg-amber-400 text-amber-950 text-[9px] font-bold px-2 py-1 rounded-md">BEST SELLER</span>}
                </div>
                <p className={`text-xs mb-6 leading-relaxed ${idx === 1 ? 'text-slate-400' : 'text-slate-500'}`}>{pkg.deskripsi}</p>
                <ul className="space-y-3 mb-8">
                  {pkg.fitur?.map((f: string, i: number) => (
-                   <li key={i} className={`text-sm flex items-center gap-2 ${idx === 1 ? 'text-black' : 'text-slate-700'}`}><span className="text-emerald-500">✔</span> {f}</li>
+                   <li key={i} className={`text-sm flex items-center gap-2 ${idx === 1 ? 'text-white' : 'text-slate-700'}`}><span className="text-emerald-500">✔</span> {f}</li>
                  ))}
                </ul>
              </div>

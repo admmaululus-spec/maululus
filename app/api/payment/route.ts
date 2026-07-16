@@ -1,8 +1,12 @@
+// app/api/payment/route.ts
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 
 export const runtime = 'edge';
+
+// Sesuaikan dengan nilai konversi koin Anda
+const NILAI_TUKAR_KOIN = 5000; 
 
 export async function POST(req: Request) {
   try {
@@ -17,59 +21,97 @@ export async function POST(req: Request) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const userId = session.user.id; // KITA BUTUH INI UNTUK CUSTOM_FIELD1
+    const userId = session.user.id;
 
     const body = await req.json();
-    const { order_id, first_name, email, phone, item_name } = body;
+    // Tangkap koin_dipakai (default 0 jika tidak ada)
+    const { order_id, first_name, email, phone, item_name, koin_dipakai = 0 } = body;
 
-    // 1. Validasi input dasar
     if (!order_id || !first_name || !email || !item_name) {
       return NextResponse.json({ error: 'Data pembayaran tidak lengkap' }, { status: 400 });
     }
 
-    // 2. Ambil harga dari database (jangan percaya input klien)
-    let validGrossAmount = 0;
-    const { data: coinPkg } = await supabase.from('coin_packages').select('harga').eq('nama', item_name).single();
+    // 1. Ambil harga dari database
+    let originalPrice = 0;
+    const { data: coinPkg } = await supabase.from('coin_packages').select('harga').eq('nama', item_name).maybeSingle();
     
     if (coinPkg) {
-      validGrossAmount = coinPkg.harga;
+      originalPrice = coinPkg.harga;
     } else {
-      const { data: expertPkg } = await supabase.from('expert_packages').select('harga').eq('nama', item_name).single();
-      if (expertPkg) validGrossAmount = expertPkg.harga;
+      const { data: expertPkg } = await supabase.from('expert_packages').select('harga').eq('nama', item_name).maybeSingle();
+      if (expertPkg) originalPrice = expertPkg.harga;
     }
 
-    if (validGrossAmount <= 0) {
+    if (originalPrice <= 0) {
       return NextResponse.json({ error: 'Paket tidak valid atau tidak ditemukan' }, { status: 400 });
+    }
+
+    // ==========================================
+    // 2. VALIDASI DISKON KOIN SECARA AMAN
+    // ==========================================
+    let totalDiskon = 0;
+    let validKoinDipakai = 0;
+
+    if (koin_dipakai > 0) {
+      // Cek koin asli di database agar user tidak bisa hack dari inspect element
+      const { data: userData } = await supabase.from('users_data').select('koin').eq('id', userId).single();
+      const koinTersedia = userData?.koin || 0;
+
+      if (koinTersedia >= koin_dipakai) {
+         validKoinDipakai = koin_dipakai;
+         totalDiskon = validKoinDipakai * NILAI_TUKAR_KOIN;
+      } else {
+         return NextResponse.json({ error: 'Koin Anda tidak cukup untuk diskon ini.' }, { status: 400 });
+      }
+    }
+
+    const finalGrossAmount = originalPrice - totalDiskon;
+
+    // Pastikan harga akhir tidak minus (jika diskon koin lebih besar dari harga paket)
+    if (finalGrossAmount <= 0) {
+      return NextResponse.json({ error: 'Diskon melebihi harga paket' }, { status: 400 });
     }
 
     const serverKey = process.env.MIDTRANS_SERVER_KEY;
     if (!serverKey) {
-      console.error("MIDTRANS_SERVER_KEY belum diatur!");
       return NextResponse.json({ error: 'Konfigurasi Server Midtrans belum lengkap.' }, { status: 500 });
     }
     
     const base64Key = btoa(serverKey + ':');
 
-    // 3. PAYLOAD MIDTRANS (Tambahkan custom_field di sini)
+    // 3. SUSUN ITEM DETAILS UNTUK MIDTRANS
+    const item_details: any[] = [{
+      id: String(order_id).substring(0, 50),
+      price: Math.round(originalPrice),
+      quantity: 1,
+      name: String(item_name).substring(0, 50)
+    }];
+
+    // Jika ada diskon, masukkan sebagai item dengan harga Minus (-)
+    if (totalDiskon > 0) {
+      item_details.push({
+        id: 'DISKON-KOIN',
+        price: -Math.round(totalDiskon),
+        quantity: 1,
+        name: `Diskon Koin (${validKoinDipakai} Koin)`
+      });
+    }
+
     const payload = {
       transaction_details: {
         order_id: order_id,
-        gross_amount: Math.round(validGrossAmount),
+        gross_amount: Math.round(finalGrossAmount), // Harus seimbang dengan total item_details
       },
       customer_details: {
         first_name: String(first_name).substring(0, 50),
         email: String(email).substring(0, 50),
         phone: phone ? String(phone).substring(0, 20) : '',
       },
-      item_details: [{
-        id: String(order_id).substring(0, 50),
-        price: Math.round(validGrossAmount),
-        quantity: 1,
-        name: String(item_name).substring(0, 50)
-      }],
-      // INI SANGAT PENTING AGAR WEBHOOK TAHU SIAPA YANG BAYAR DAN PAKET APA
+      item_details: item_details,
+      
       custom_field1: userId,
-      custom_field2: String(item_name).substring(0, 50)
+      custom_field2: String(item_name).substring(0, 50),
+      custom_field3: String(validKoinDipakai) // Titipkan data koin ke Webhook
     };
 
     const response = await fetch('https://app.sandbox.midtrans.com/snap/v1/transactions', {
