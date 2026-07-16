@@ -1,6 +1,8 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
+import CookieBanner from "./components/CookieBanner"; // <-- 1. Import Cookie Banner
 
 // Konfigurasi Font Poppins
 const poppins = Poppins({
@@ -83,6 +85,10 @@ export default function RootLayout({
       </head>
       <body className={`${poppins.variable} font-sans antialiased text-slate-900 bg-slate-50`}>
         {children}
+        
+        {/* 4. Pasang Cookie Banner di Sini */}
+        <CookieBanner />
+        
         {/* SCRIPT MIDTRANS SUDAH DIHAPUS DARI SINI AGAR TIDAK BENTROK DENGAN GOOGLE LOGIN */}
       </body>
     </html>

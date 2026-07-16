@@ -26,7 +26,7 @@ export async function POST(req: Request) {
       // Jika limit sudah habis, tolak permintaan
       if (freeUsageCount >= 2) {
         return NextResponse.json(
-          { error: 'Batas penggunaan gratis habis (Maks. 2x). Silakan Masuk / Daftar Akun secara gratis untuk melanjutkan!' }, 
+          { error: 'Batas penggunaan tercapai. Silakan Masuk / Daftar Akun untuk Unlimited Generate' }, 
           { status: 401 }
         );
       }
