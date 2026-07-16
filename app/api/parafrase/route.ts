@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     const safeText = String(text).substring(0, 5000); // Max ~5000 karakter
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-3.5-flash',
+      model: 'gemini-2.5-flash',
       generationConfig: { temperature: 0.4 }
     });
 

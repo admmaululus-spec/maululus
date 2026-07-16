@@ -86,7 +86,7 @@ export async function POST(req: Request) {
     const safeKarya = jenisKarya ? String(jenisKarya).substring(0, 50) : 'S1 - Skripsi';
 
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-3.5-flash',
+      model: 'gemini-2.5-flash',
       generationConfig: { responseMimeType: "application/json", temperature: 0.7 }
     });
 

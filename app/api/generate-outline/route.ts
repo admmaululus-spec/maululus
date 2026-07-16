@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     const safeJudul = String(judul).substring(0, 300); // Mencegah input raksasa
 
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-3.5-flash',
+      model: 'gemini-2.5-flash',
       generationConfig: {
         responseMimeType: "application/json",
         temperature: 0.3

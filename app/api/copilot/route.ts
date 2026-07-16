@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     const safeJudul = String(judulSkripsi || 'Skripsi').substring(0, 200);
     const safeBab = String(namaBab || 'Bab Umum').substring(0, 100);
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     let promptText = '';
     const konteks = `Judul Skripsi: "${safeJudul}". Sedang menulis bagian: "${safeBab}".\n\n`;
 
