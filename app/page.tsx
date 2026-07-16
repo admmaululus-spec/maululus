@@ -8,6 +8,7 @@ import ServicesSection from './components/home/ServicesSection';
 import Footer from './components/home/Footer';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 async function getExpertPackages(supabase: any) {
   try {
