@@ -149,20 +149,22 @@ export default function Home() {
               </div>
             </FadeIn>
 
-            {/* Kolom Kanan: Mockup Dashboard (Memanggil Gambar) */}
-            <FadeIn delay={200} className="relative z-10 w-full flex justify-center lg:justify-end">
-              <div className="relative w-full max-w-[600px] flex transform hover:-translate-y-2 transition-transform duration-500">
+            {/* Kolom Kanan: Mockup Dashboard (Diperbesar) */}
+            <FadeIn delay={200} className="relative z-10 w-full flex justify-center lg:justify-end mt-10 lg:mt-0">
+              
+              {/* Tambahan scale-110 dan memperbesar max-w dari 600px menjadi 750px */}
+              <div className="relative w-full max-w-[750px] lg:scale-110 lg:origin-right flex transform hover:-translate-y-2 transition-transform duration-500">
                  
                  <img 
-                    src="/mockup-dashboard2.png" 
+                    src="/mockup-dashboard.png" 
                     alt="Mockup Dashboard Maululus" 
                     className="w-full h-auto object-contain drop-shadow-2xl rounded-2xl"
                  />
-
+                 
               </div>
               
-              {/* Background Ornamen */}
-              <div className="absolute top-1/2 left-1/2 -z-10 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-100/50 blur-[100px]"></div>
+              {/* Background Ornamen Biru (Dibuat sedikit lebih besar agar proporsional) */}
+              <div className="absolute top-1/2 left-1/2 -z-10 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-100/50 blur-[100px]"></div>
             </FadeIn>
 
           </div>

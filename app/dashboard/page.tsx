@@ -16,6 +16,9 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  // TAMBAHAN: State untuk mengontrol pop-up logout
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>('Mahasiswa');
@@ -78,7 +81,7 @@ export default function DashboardPage() {
     initializeDashboard();
   }, [router]);
 
-  // PERBAIKAN: Menambahkan Try-Catch pada parse JSON agar dashboard tidak blank
+  // Try-Catch pada parse JSON agar dashboard tidak blank
   const syncPendingData = async (uid: string) => {
     const pendingJudul = localStorage.getItem('maululus_pending_judul');
     const pendingOutline = localStorage.getItem('maululus_pending_outline');
@@ -99,13 +102,18 @@ export default function DashboardPage() {
       } catch (e) {
         console.error("Format data outline di localStorage tidak valid", e);
       } finally {
-        // Selalu bersihkan localStorage entah proses insert berhasil atau gagal
         ['maululus_pending_judul', 'maululus_pending_outline', 'maululus_history'].forEach(key => localStorage.removeItem(key));
       }
     }
   };
 
-  const handleLogout = async () => {
+  // TAMBAHAN: Fungsi ketika tombol Keluar di Sidebar di-klik (Buka Modal)
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  // TAMBAHAN: Fungsi eksekusi asli ketika menekan "Ya, Keluar" di Modal
+  const confirmLogout = async () => {
     await supabase.auth.signOut();
     router.replace('/auth');
   };
@@ -135,13 +143,46 @@ export default function DashboardPage() {
   );
 
   return (
-    // Menggunakan h-full karena tinggi 100dvh sudah di-handle oleh layout.tsx
-    <div className="flex h-full w-full bg-[#F4F7FE] font-sans text-slate-800 overflow-hidden">
-      <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} activeMenu={activeMenu} setActiveMenu={setActiveMenu} userName={userName} isPro={isPro} handleLogout={handleLogout} />
+    <div className="flex h-full w-full bg-[#F4F7FE] font-sans text-slate-800 overflow-hidden relative">
+      
+      {/* Oper fungsi handleLogoutClick ke Sidebar */}
+      <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} activeMenu={activeMenu} setActiveMenu={setActiveMenu} userName={userName} isPro={isPro} handleLogout={handleLogoutClick} />
       
       <CenterContent activeMenu={activeMenu} setActiveMenu={setActiveMenu} setIsSidebarOpen={setIsSidebarOpen} userName={userName} userEmail={userEmail} userWhatsapp={userWhatsapp} koin={koin} riwayatList={riwayatList} premiumProjects={premiumProjects} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} router={router} />
       
       <RightPanel activeMenu={activeMenu} setActiveMenu={setActiveMenu} koin={koin} isPro={isPro} />
+
+      {/* ======================================================== */}
+      {/* POP-UP KONFIRMASI LOGOUT */}
+      {/* ======================================================== */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200 text-center relative">
+            <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-extrabold text-slate-800 mb-2">Yakin ingin keluar?</h3>
+            <p className="text-sm text-slate-500 mb-8 leading-relaxed">Sesi Anda saat ini akan diakhiri dan Anda harus masuk kembali untuk mengakses dashboard.</p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowLogoutModal(false)} 
+                className="flex-1 py-3.5 px-4 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={confirmLogout} 
+                className="flex-1 py-3.5 px-4 bg-rose-600 text-white font-bold rounded-xl hover:bg-rose-700 transition-colors shadow-lg shadow-rose-600/30"
+              >
+                Ya, Keluar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
     </div>
   );
 }

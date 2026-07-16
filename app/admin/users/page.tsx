@@ -10,16 +10,24 @@ type UserData = {
   whatsapp: string; 
   email?: string; 
   created_at: string;
-  generate_count?: number; // Tambahan field untuk total generate
+  generate_count?: number; 
 };
 type HistoryData = { id: string; paket_nama: string; koin_jumlah: number; harga_rp: number; metode: string; created_at: string };
+
+// Tipe data untuk konfigurasi sorting
+type SortConfig = {
+  key: keyof UserData | null;
+  direction: 'asc' | 'desc';
+};
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // State untuk Sorting (Default: urutkan berdasarkan koin terbanyak / desc)
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'koin', direction: 'desc' });
   
   // State untuk Modal Riwayat
   const [historyModal, setHistoryModal] = useState<{ show: boolean, user: UserData | null, records: HistoryData[], loading: boolean }>({ 
@@ -30,25 +38,20 @@ export default function AdminUsersPage() {
     setIsLoading(true);
     
     // 1. Ambil data seluruh user
-    const { data: usersData } = await supabase
-      .from('users_data')
-      .select('*')
-      .order('koin', { ascending: false });
+    const { data: usersData } = await supabase.from('users_data').select('*');
       
-    // 2. Ambil data riwayat AI (khusus Buat Judul) untuk dihitung
-    const { data: aiHistoryData } = await supabase
-      .from('ai_tools_history')
-      .select('user_id')
-      .eq('tool_name', 'Buat Judul');
+    // 2. Ambil data dari history_skripsi (Tabel yang sudah bisa diakses admin)
+    const { data: skripsiData } = await supabase.from('history_skripsi').select('user_id');
+
+    // 3. Ambil data riwayat AI (Jika RLS sudah dibuka)
+    const { data: aiHistoryData } = await supabase.from('ai_tools_history').select('user_id');
 
     if (usersData) {
-      // 3. Gabungkan data user dengan jumlah riwayatnya
+      // 4. Gabungkan data user dengan jumlah riwayatnya
       const combinedUsers = usersData.map(user => {
-        const generateCount = aiHistoryData 
-          ? aiHistoryData.filter(h => h.user_id === user.id).length 
-          : 0;
-          
-        return { ...user, generate_count: generateCount };
+        const countSkripsi = skripsiData ? skripsiData.filter(h => h.user_id === user.id).length : 0;
+        const countAi = aiHistoryData ? aiHistoryData.filter(h => h.user_id === user.id).length : 0;
+        return { ...user, generate_count: countSkripsi + countAi };
       });
       setUsers(combinedUsers);
     }
@@ -58,27 +61,15 @@ export default function AdminUsersPage() {
 
   useEffect(() => { fetchUsers(); }, []);
 
-  // Update Koin + Catat Riwayat ke tabel transactions
   const handleUpdateKoin = async (user: UserData, addAmount: number) => {
     setUpdatingId(user.id);
     const newKoin = user.koin + addAmount;
-    
     try {
-      // 1. Update koin di users_data
       await supabase.from('users_data').update({ koin: newKoin }).eq('id', user.id);
-      
-      // 2. Catat ke tabel transactions
       await supabase.from('transactions').insert({
-        user_id: user.id,
-        user_email: user.email || 'Tanpa Email',
-        paket_nama: 'Top Up Manual (Admin)',
-        koin_jumlah: addAmount,
-        harga_rp: 0,
-        metode: 'Admin Action',
-        status: 'SUCCESS'
+        user_id: user.id, user_email: user.email || 'Tanpa Email', paket_nama: 'Top Up Manual (Admin)',
+        koin_jumlah: addAmount, harga_rp: 0, metode: 'Admin Action', status: 'SUCCESS'
       });
-
-      // 3. Perbarui UI state
       setUsers(users.map(u => u.id === user.id ? { ...u, koin: newKoin } : u));
     } catch (err) {
       alert("Gagal menambahkan koin.");
@@ -87,7 +78,6 @@ export default function AdminUsersPage() {
     }
   };
 
-  // Toggle PRO Status
   const handleTogglePro = async (id: string, currentStatus: boolean) => {
     setUpdatingId(id);
     await supabase.from('users_data').update({ is_pro: !currentStatus }).eq('id', id);
@@ -95,19 +85,67 @@ export default function AdminUsersPage() {
     setUpdatingId(null);
   };
 
-  // Buka Modal Riwayat Topup
   const openHistoryModal = async (user: UserData) => {
     setHistoryModal({ show: true, user: user, records: [], loading: true });
     const { data } = await supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
     setHistoryModal({ show: true, user: user, records: data || [], loading: false });
   };
 
-  const filteredUsers = users.filter(user => {
+  // ==========================================
+  // LOGIKA SORTING (PENGURUTAN)
+  // ==========================================
+  const handleSort = (key: keyof UserData) => {
+    let direction: 'asc' | 'desc' = 'desc';
+    // Jika kolom yang diklik sama dan posisinya desc, ubah jadi asc
+    if (sortConfig.key === key && sortConfig.direction === 'desc') {
+      direction = 'asc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedUsers = [...users].sort((a, b) => {
+    if (!sortConfig.key) return 0;
+
+    let aValue = a[sortConfig.key] ?? ''; // Fallback string kosong jika null
+    let bValue = b[sortConfig.key] ?? '';
+
+    // Jika yang disortir adalah string (seperti email)
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      return sortConfig.direction === 'asc' 
+        ? aValue.localeCompare(bValue) 
+        : bValue.localeCompare(aValue);
+    }
+
+    // Jika yang disortir angka atau boolean
+    if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const filteredAndSortedUsers = sortedUsers.filter(user => {
     const searchLower = searchTerm.toLowerCase();
     return user.email?.toLowerCase().includes(searchLower) || user.whatsapp?.toLowerCase().includes(searchLower) || user.id.toLowerCase().includes(searchLower);
   });
 
   const formatRp = (angka: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(angka);
+
+  // Komponen Helper untuk Ikon Segitiga Sorting
+  const SortIcon = ({ columnKey }: { columnKey: keyof UserData }) => {
+    if (sortConfig.key !== columnKey) {
+      // Ikon default abu-abu (tidak sedang disortir)
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-slate-300 opacity-50 transition-opacity group-hover:opacity-100">
+          <path fillRule="evenodd" d="M10 3a.75.75 0 01.53.22l3.25 3.25a.75.75 0 11-1.06 1.06L10.5 5.31V14.69l2.22-2.22a.75.75 0 111.06 1.06l-3.25 3.25a.75.75 0 01-1.06 0l-3.25-3.25a.75.75 0 111.06-1.06l2.22 2.22V5.31L6.28 7.53a.75.75 0 01-1.06-1.06l3.25-3.25A.75.75 0 0110 3z" clipRule="evenodd" />
+        </svg>
+      );
+    }
+    // Ikon biru pekat menunjukkan arah sorting
+    return sortConfig.direction === 'asc' ? (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-blue-600"><path fillRule="evenodd" d="M14.77 12.79a.75.75 0 01-1.06-.02L10 8.832 6.29 12.77a.75.75 0 11-1.08-1.04l4.25-4.5a.75.75 0 011.08 0l4.25 4.5a.75.75 0 01-.02 1.06z" clipRule="evenodd" /></svg>
+    ) : (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-blue-600"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" /></svg>
+    );
+  };
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 max-w-7xl mx-auto p-8 font-sans">
@@ -126,7 +164,7 @@ export default function AdminUsersPage() {
             placeholder="Cari email, WA, atau ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
           />
         </div>
       </div>
@@ -134,22 +172,48 @@ export default function AdminUsersPage() {
       <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-600">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-slate-50 border-b border-slate-200 select-none">
               <tr>
-                <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px]">Email / WhatsApp</th>
-                <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px]">Sisa Koin</th>
-                <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px]">Total Generate</th>
-                <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px]">Status Paket</th>
+                {/* Header dengan aksi klik untuk Sorting */}
+                <th 
+                  className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px] cursor-pointer hover:bg-slate-100 transition-colors group"
+                  onClick={() => handleSort('email')}
+                >
+                  <div className="flex items-center gap-1.5">Email / WhatsApp <SortIcon columnKey="email" /></div>
+                </th>
+                
+                <th 
+                  className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px] cursor-pointer hover:bg-slate-100 transition-colors group"
+                  onClick={() => handleSort('koin')}
+                >
+                  <div className="flex items-center gap-1.5">Sisa Koin <SortIcon columnKey="koin" /></div>
+                </th>
+                
+                <th 
+                  className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px] cursor-pointer hover:bg-slate-100 transition-colors group"
+                  onClick={() => handleSort('generate_count')}
+                >
+                  <div className="flex items-center gap-1.5">Total Generate <SortIcon columnKey="generate_count" /></div>
+                </th>
+                
+                <th 
+                  className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px] cursor-pointer hover:bg-slate-100 transition-colors group"
+                  onClick={() => handleSort('is_pro')}
+                >
+                  <div className="flex items-center gap-1.5">Status Paket <SortIcon columnKey="is_pro" /></div>
+                </th>
+                
                 <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px] text-right">Aksi Cepat</th>
               </tr>
             </thead>
+            
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                  <tr><td colSpan={5} className="px-6 py-12 text-center text-blue-600 font-bold animate-pulse">Memuat data pengguna...</td></tr>
-              ) : filteredUsers.length === 0 ? (
+              ) : filteredAndSortedUsers.length === 0 ? (
                  <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-medium">Tidak ada pengguna yang cocok dengan pencarian.</td></tr>
               ) : (
-                filteredUsers.map((user) => (
+                filteredAndSortedUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="font-bold text-slate-900 flex items-center gap-2">
