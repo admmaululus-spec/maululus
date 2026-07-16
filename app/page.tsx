@@ -134,18 +134,7 @@ export default function Home() {
                 
                 <div className="hidden sm:block h-10 w-px bg-slate-200"></div>
 
-                <div>
-                  <p className="text-xs text-slate-500 font-medium mb-2">Dipakai mahasiswa dari</p>
-                  <div className="flex items-center gap-3 text-sm font-black text-slate-400">
-                    <span className="text-amber-500">UB</span>
-                    <span className="text-blue-600">ITS</span>
-                    <span className="text-blue-800">UNAIR</span>
-                    <span className="text-indigo-900">UNDIP</span>
-                    <span className="text-yellow-500">UNNES</span>
-                    <span className="text-xs font-semibold bg-slate-100 px-2 py-1 rounded-md text-slate-600">+150 Kampus lainnya</span>
-                  </div>
-                </div>
-              </div>
+     </div>
             </FadeIn>
 
             {/* Kolom Kanan: CSS Dashboard Mockup (TANPA GAMBAR FILE) */}
