@@ -1,4 +1,3 @@
-// app/api/generate-judul/route.ts
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { cookies } from 'next/headers';
@@ -18,17 +17,11 @@ export async function POST(req: Request) {
     
     const { data: { session } } = await supabase.auth.getSession();
     
-    // --- 1. LOGIKA FREE TRIAL UNTUK USER BELUM LOGIN ---
     let freeUsageCount = 0;
     if (!session) {
       freeUsageCount = parseInt(cookieStore.get('free_gen_count')?.value || '0', 10);
-      
-      // Jika limit sudah habis, tolak permintaan
       if (freeUsageCount >= 2) {
-        return NextResponse.json(
-          { error: 'Batas penggunaan tercapai. Silakan Masuk / Daftar Akun untuk Unlimited Generate' }, 
-          { status: 401 }
-        );
+        return NextResponse.json({ error: 'Batas penggunaan tercapai. Silakan Masuk / Daftar Akun untuk Unlimited Generate' }, { status: 401 });
       }
     }
 
@@ -42,19 +35,13 @@ export async function POST(req: Request) {
     let currentKoin = 0;
     let HARGA_KOIN = 0;
 
-    // --- 2. LOGIKA PEMOTONGAN KOIN UNTUK USER LOGIN ---
     if (session) {
       const userId = session.user.id;
-      
-      const { data: pricingData } = await supabase
-        .from('ai_tools_pricing')
-        .select('koin')
-        .eq('id', 'generator') 
-        .single();
-      
+      const { data: pricingData } = await supabase.from('ai_tools_pricing').select('koin').eq('id', 'generator').single();
       HARGA_KOIN = pricingData?.koin !== undefined ? pricingData.koin : 5;
 
-      const { data: profile } = await supabase.from('profiles').select('koin').eq('id', userId).single();
+      // PERBAIKAN: Gunakan users_data
+      const { data: profile } = await supabase.from('users_data').select('koin').eq('id', userId).single();
       currentKoin = profile?.koin || 0;
 
       if (currentKoin < HARGA_KOIN) {
@@ -62,22 +49,13 @@ export async function POST(req: Request) {
       }
 
       if (HARGA_KOIN > 0) {
-        const { error: deductError } = await supabase
-          .from('profiles')
-          .update({ koin: currentKoin - HARGA_KOIN })
-          .eq('id', userId);
-          
+        const { error: deductError } = await supabase.from('users_data').update({ koin: currentKoin - HARGA_KOIN }).eq('id', userId);
         if (deductError) throw new Error("Gagal memotong koin di database.");
       }
 
-      await supabase.from('ai_tools_history').insert({
-        user_id: userId,
-        tool_name: 'Buat Judul',
-        input_data: `Jurusan: ${String(jurusan).substring(0,25)}...`
-      });
+      await supabase.from('ai_tools_history').insert({ user_id: userId, tool_name: 'Buat Judul', input_data: `Jurusan: ${String(jurusan).substring(0,25)}...` });
     }
 
-    // --- 3. EKSEKUSI PROSES AI GEMINI ---
     const safeUniversitas = String(universitas).substring(0, 100);
     const safeJurusan = String(jurusan).substring(0, 100);
     const safeMinat = minat ? String(minat).substring(0, 300) : '';
@@ -92,10 +70,8 @@ export async function POST(req: Request) {
 
     const promptText = `
       Kamu adalah Dosen Penguji Senior sekaligus asisten akademik ahli di ${safeUniversitas}.
-      
       Tugas Pertamamu: Analisis input program studi/jurusan berikut: "${safeJurusan}".
       Jika input tersebut typo parah, tidak masuk akal (misal: "makan nasi", "asdfg"), di luar konteks akademik, atau bukan nama jurusan yang lazim, kamu WAJIB menolak dan memberikan teguran.
-      
       Tugas Keduamu: Jika jurusan valid, buatkan 3 ide judul untuk ${safeKarya} yang inovatif dan ANTI-PASARAN khusus untuk standar ${safeUniversitas}.
       ${safeMinat ? `Topik spesifik/minat: "${safeMinat}".` : ''}
       ${safeMasalah ? `Masalah/Fenomena: "${safeMasalah}".` : ''}
@@ -128,7 +104,6 @@ export async function POST(req: Request) {
       textOutput = textOutput.replace(/```json/g, '').replace(/```/g, '').trim();
       const parsedData = JSON.parse(textOutput);
       
-      // --- 4. KIRIM RESPONSE & SET COOKIE UNTUK USER ANONIM ---
       const responseData = {
         ...parsedData,
         sisa_koin: session ? (currentKoin - HARGA_KOIN) : null,
@@ -137,26 +112,18 @@ export async function POST(req: Request) {
 
       const response = NextResponse.json(responseData);
 
-      // Tambahkan/Update cookie jika ini user anonim (masa aktif 30 hari)
       if (!session) {
         response.cookies.set('free_gen_count', (freeUsageCount + 1).toString(), {
-          path: '/',
-          maxAge: 60 * 60 * 24 * 30, // 30 Hari
-          httpOnly: true, // Tidak bisa dimanipulasi dengan script document.cookie
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
+          path: '/', maxAge: 60 * 60 * 24 * 30, httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax',
         });
       }
 
       return response;
-
     } catch (parseError) {
-      console.error("Gagal parse JSON dari AI:", textOutput);
       return NextResponse.json({ error: `Format balasan AI salah.` }, { status: 500 });
     }
 
   } catch (error: any) {
-    console.error('Error server API:', error);
     return NextResponse.json({ error: `Pesan Error Server: ${error.message || 'Unknown Error'}` }, { status: 500 });
   }
 }
