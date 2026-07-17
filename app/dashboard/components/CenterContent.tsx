@@ -1,3 +1,4 @@
+// app/dashboard/components/CenterContent.tsx
 'use client';
 import React from 'react';
 import { BellIcon } from './IconsAndUI';
@@ -9,10 +10,10 @@ import TabJurnal from './TabJurnal';
 import TabExpert from './TabExpert';
 import { TabKoin, TabTopup } from './BillingTabs';
 
-// Menambahkan props baru: userNama, transactions, handleSaveProfile, isSavingProfile
 export default function CenterContent({ 
   activeMenu, setActiveMenu, setIsSidebarOpen, userName, userEmail, 
   userWhatsapp, userNama, koin, riwayatList, premiumProjects, transactions, 
+  notifications, // 👈 PERBAIKAN: Menangkap Props Notifikasi
   handleBukaKunci, handleSaveProfile, isProcessing, isSavingProfile, router, userId 
 }: any) {
   
@@ -20,8 +21,10 @@ export default function CenterContent({
   const jurnalRefList = riwayatList.filter((item: any) => item.tool_name);
   const activeProject = premiumProjects && premiumProjects.length > 0 ? premiumProjects[0] : null;
 
-  // Menambahkan transaksi, notifikasi, dan bantuan ke daftar menu valid
   const validMenus = ['dashboard', 'proyek', 'ai-tools', 'dokumen', 'jurnal', 'pengaturan', 'expert', 'koin', 'topup', 'transaksi', 'notifikasi', 'bantuan'];
+
+  // Hitung berapa banyak notifikasi yang belum dibaca (is_read = false)
+  const unreadCount = notifications ? notifications.filter((n: any) => !n.is_read).length : 0;
 
   return (
     <main className="flex-1 flex flex-col h-full overflow-hidden">
@@ -41,10 +44,14 @@ export default function CenterContent({
             <span className="text-sm font-bold text-slate-800">{koin} Koin</span>
           </button>
           
-          {/* Ikon Lonceng sekarang bisa diklik untuk membuka Notifikasi */}
           <button onClick={() => setActiveMenu('notifikasi')} className="relative text-slate-400 hover:text-slate-600 transition-colors">
             <BellIcon />
-            <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 border-2 border-white rounded-full"></span>
+            {/* PERBAIKAN: Badge angka merah dinamis mengikuti jumlah belum dibaca */}
+            {unreadCount > 0 && (
+               <span className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-red-500 border-2 border-white rounded-full text-[8px] font-bold text-white flex items-center justify-center">
+                 {unreadCount}
+               </span>
+            )}
           </button>
           
           <div className="hidden md:flex items-center gap-2 ml-2 pl-4 border-l border-slate-200 cursor-pointer" onClick={() => setActiveMenu('pengaturan')}>
@@ -65,9 +72,7 @@ export default function CenterContent({
         {activeMenu === 'koin' && <TabKoin koin={koin} riwayatList={riwayatList} setActiveMenu={setActiveMenu} />}
         {activeMenu === 'topup' && <TabTopup koin={koin} />}
         
-        {/* ========================================= */}
         {/* TAB TRANSAKSI */}
-        {/* ========================================= */}
         {activeMenu === 'transaksi' && (
           <div className="animate-in fade-in duration-500 max-w-5xl mx-auto">
             <div className="mb-8">
@@ -95,8 +100,8 @@ export default function CenterContent({
                       </td>
                       <td className="px-6 py-4 font-bold text-slate-800">Rp{trx.harga_rp.toLocaleString('id-ID')}</td>
                       <td className="px-6 py-4">
-                        <span className="bg-green-100 text-green-700 border border-green-200 px-2.5 py-1 rounded-md text-[10px] font-bold">
-                          +{trx.koin_jumlah} Koin
+                        <span className={`border px-2.5 py-1 rounded-md text-[10px] font-bold ${trx.koin_jumlah >= 0 ? 'bg-green-100 text-green-700 border-green-200' : 'bg-amber-100 text-amber-700 border-amber-200'}`}>
+                          {trx.koin_jumlah >= 0 ? `+${trx.koin_jumlah} Koin` : `${trx.koin_jumlah} Koin`}
                         </span>
                       </td>
                     </tr>
@@ -109,9 +114,7 @@ export default function CenterContent({
           </div>
         )}
 
-        {/* ========================================= */}
         {/* TAB PENGATURAN PROFIL */}
-        {/* ========================================= */}
         {activeMenu === 'pengaturan' && (
           <div className="animate-in fade-in duration-500 max-w-3xl mx-auto">
             <div className="mb-8">
@@ -164,39 +167,40 @@ export default function CenterContent({
           </div>
         )}
 
-        {/* ========================================= */}
         {/* TAB NOTIFIKASI */}
-        {/* ========================================= */}
         {activeMenu === 'notifikasi' && (
           <div className="animate-in fade-in duration-500 max-w-3xl mx-auto">
             <div className="mb-8">
               <h2 className="text-2xl font-extrabold text-slate-800">Notifikasi</h2>
-              <p className="text-slate-500 text-sm mt-1">Pembaruan sistem dan info promo terbaru.</p>
+              <p className="text-slate-500 text-sm mt-1">Pembaruan sistem dan peringatan akun Anda.</p>
             </div>
+            
+            {/* PERBAIKAN: Menggunakan data 'notifications' dari props secara dinamis */}
             <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 flex gap-4 items-start">
-                <div className="bg-blue-600 text-white p-2 rounded-full shrink-0">🔔</div>
-                <div>
-                  <h4 className="font-bold text-blue-900">Selamat datang di Maululus!</h4>
-                  <p className="text-sm text-blue-800/80 mt-1">Platform AI Skripsi #1 di Indonesia siap membantu Anda lulus lebih cepat. Dapatkan koin gratis untuk mencoba fitur kami.</p>
-                  <span className="text-[10px] text-blue-500 font-bold mt-2 block">Baru saja</span>
+              {notifications && notifications.length > 0 ? notifications.map((notif: any) => (
+                <div key={notif.id} className={`border rounded-2xl p-5 flex gap-4 items-start transition-all ${!notif.is_read ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-slate-200'}`}>
+                  <div className={`p-2.5 rounded-full shrink-0 text-xl ${!notif.is_read ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}>
+                    {notif.icon || '🔔'}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className={`font-bold ${!notif.is_read ? 'text-blue-900' : 'text-slate-800'}`}>{notif.title}</h4>
+                    <p className={`text-sm mt-1 leading-relaxed ${!notif.is_read ? 'text-blue-800/80' : 'text-slate-500'}`}>{notif.message}</p>
+                    <span className={`text-[10px] font-bold mt-3 block uppercase tracking-widest ${!notif.is_read ? 'text-blue-500' : 'text-slate-400'}`}>
+                      {new Date(notif.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit' })}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 flex gap-4 items-start">
-                <div className="bg-slate-100 text-slate-500 p-2 rounded-full shrink-0">🚀</div>
-                <div>
-                  <h4 className="font-bold text-slate-800">Update Sistem V2.0</h4>
-                  <p className="text-sm text-slate-500 mt-1">Sistem pembayaran otomatis telah diaktifkan. Anda kini bisa langsung Top Up Koin 24/7 dan koin akan otomatis masuk!</p>
-                  <span className="text-[10px] text-slate-400 font-bold mt-2 block">Hari ini</span>
+              )) : (
+                <div className="text-center p-10 border border-slate-200 border-dashed rounded-3xl text-slate-400">
+                  <div className="text-4xl mb-3 opacity-50">📭</div>
+                  <p>Belum ada notifikasi saat ini.</p>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* ========================================= */}
         {/* TAB BANTUAN */}
-        {/* ========================================= */}
         {activeMenu === 'bantuan' && (
           <div className="animate-in fade-in duration-500 max-w-3xl mx-auto">
             <div className="mb-8">

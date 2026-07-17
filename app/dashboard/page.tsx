@@ -23,15 +23,15 @@ export default function DashboardPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>('Mahasiswa');
   const [userWhatsapp, setUserWhatsapp] = useState('');
-  const [userNama, setUserNama] = useState('');
+  const [userNama, setUserNama] = useState(''); 
   const [koin, setKoin] = useState(0);
   const [isPro, setIsPro] = useState(false);
   
   const [riwayatList, setRiwayatList] = useState<RiwayatItem[]>([]);
   const [premiumProjects, setPremiumProjects] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState<any[]>([]); // TAMBAHAN: State Notifikasi
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [transactions, setTransactions] = useState<any[]>([]); 
+  const [notifications, setNotifications] = useState<any[]>([]); // 👈 SANGAT PENTING: State Notifikasi
+  const [isSavingProfile, setIsSavingProfile] = useState(false); 
 
   useEffect(() => {
     const initializeDashboard = async () => {
@@ -46,14 +46,14 @@ export default function DashboardPage() {
 
         await syncPendingData(currentUserId);
 
-        // PANGGIL API UNTUK MENG-EVALUASI ATURAN NOTIFIKASI (JALAN DI BACKGROUND)
+        // 👈 TRIGGER API RULES ENGINE (Di Belakang Layar)
         fetch('/api/trigger-notif', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: currentUserId })
-        }).catch(err => console.error("Gagal trigger notif:", err));
+        }).catch(err => console.error(err));
 
-        // Menarik semua data termasuk Notifikasi
+        // 👈 PERBAIKAN: Menambahkan query notifikasi ke Promise.all
         const [userRes, historyRes, proyekRes, aiHistoryRes, transRes, notifRes] = await Promise.all([
           supabase.from('users_data').select('*').eq('id', currentUserId).maybeSingle(),
           supabase.from('history_skripsi').select('*').eq('user_id', currentUserId).order('created_at', { ascending: false }),
@@ -78,8 +78,8 @@ export default function DashboardPage() {
         setUserWhatsapp(userData?.whatsapp || '');
         setUserNama(userData?.nama || ''); 
         setPremiumProjects(proyekRes.data || []);
-        setTransactions(transRes.data || []); 
-        setNotifications(notifRes.data || []); // Menyimpan data notifikasi ke state
+        setTransactions(transRes.data || []);
+        setNotifications(notifRes.data || []); // 👈 PERBAIKAN: Set data Notif ke State
 
         const combinedHistory = [...(historyRes.data || []), ...(aiHistoryRes.data || [])];
         combinedHistory.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -167,7 +167,7 @@ export default function DashboardPage() {
         activeMenu={activeMenu} setActiveMenu={setActiveMenu} setIsSidebarOpen={setIsSidebarOpen} 
         userName={displayNama} userEmail={userEmail} userWhatsapp={userWhatsapp} userNama={userNama}
         koin={koin} riwayatList={riwayatList} premiumProjects={premiumProjects} transactions={transactions}
-        notifications={notifications} // MENGIRIM DATA NOTIFIKASI KE CENTER CONTENT
+        notifications={notifications} // 👈 PERBAIKAN: Kirim props notifikasi ke CenterContent
         handleBukaKunci={handleBukaKunci} handleSaveProfile={handleSaveProfile}
         isProcessing={isProcessing} isSavingProfile={isSavingProfile} router={router} 
       />
