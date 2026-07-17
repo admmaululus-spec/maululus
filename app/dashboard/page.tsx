@@ -30,7 +30,7 @@ export default function DashboardPage() {
   const [riwayatList, setRiwayatList] = useState<RiwayatItem[]>([]);
   const [premiumProjects, setPremiumProjects] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]); 
-  const [notifications, setNotifications] = useState<any[]>([]); // 👈 SANGAT PENTING: State Notifikasi
+  const [notifications, setNotifications] = useState<any[]>([]); // 👈 State Notifikasi
   const [isSavingProfile, setIsSavingProfile] = useState(false); 
 
   useEffect(() => {
@@ -46,14 +46,14 @@ export default function DashboardPage() {
 
         await syncPendingData(currentUserId);
 
-        // 👈 TRIGGER API RULES ENGINE (Di Belakang Layar)
+        // TRIGGER API RULES ENGINE (Di Belakang Layar)
         fetch('/api/trigger-notif', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: currentUserId })
         }).catch(err => console.error(err));
 
-        // 👈 PERBAIKAN: Menambahkan query notifikasi ke Promise.all
+        // Mengambil seluruh data termasuk Notifikasi
         const [userRes, historyRes, proyekRes, aiHistoryRes, transRes, notifRes] = await Promise.all([
           supabase.from('users_data').select('*').eq('id', currentUserId).maybeSingle(),
           supabase.from('history_skripsi').select('*').eq('user_id', currentUserId).order('created_at', { ascending: false }),
@@ -79,7 +79,7 @@ export default function DashboardPage() {
         setUserNama(userData?.nama || ''); 
         setPremiumProjects(proyekRes.data || []);
         setTransactions(transRes.data || []);
-        setNotifications(notifRes.data || []); // 👈 PERBAIKAN: Set data Notif ke State
+        setNotifications(notifRes.data || []); // 👈 Set data Notif ke State
 
         const combinedHistory = [...(historyRes.data || []), ...(aiHistoryRes.data || [])];
         combinedHistory.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -153,6 +153,9 @@ export default function DashboardPage() {
     ? (userNama.charAt(0).toUpperCase() + userNama.slice(1)) 
     : (userEmail.split('@')[0].charAt(0).toUpperCase() + userEmail.split('@')[0].slice(1));
 
+  // 👈 PERBAIKAN PENTING: Hitung jumlah notifikasi yang belum dibaca
+  const unreadNotifCount = notifications ? notifications.filter(n => !n.is_read).length : 0;
+
   if (isLoading) return (
     <div className="h-[100dvh] w-full bg-[#F4F7FE] flex items-center justify-center">
       <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-[#3b82f6]"></div>
@@ -161,13 +164,21 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-full w-full bg-[#F4F7FE] font-sans text-slate-800 overflow-hidden relative">
-      <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} activeMenu={activeMenu} setActiveMenu={setActiveMenu} userName={displayNama} isPro={isPro} handleLogout={handleLogoutClick} />
+      
+      {/* 👈 PERBAIKAN PENTING: Mengirim props `unreadNotifCount` ke Sidebar */}
+      <Sidebar 
+        isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} 
+        activeMenu={activeMenu} setActiveMenu={setActiveMenu} 
+        userName={displayNama} isPro={isPro} 
+        handleLogout={handleLogoutClick} 
+        unreadNotifCount={unreadNotifCount} 
+      />
       
       <CenterContent 
         activeMenu={activeMenu} setActiveMenu={setActiveMenu} setIsSidebarOpen={setIsSidebarOpen} 
         userName={displayNama} userEmail={userEmail} userWhatsapp={userWhatsapp} userNama={userNama}
         koin={koin} riwayatList={riwayatList} premiumProjects={premiumProjects} transactions={transactions}
-        notifications={notifications} // 👈 PERBAIKAN: Kirim props notifikasi ke CenterContent
+        notifications={notifications} 
         handleBukaKunci={handleBukaKunci} handleSaveProfile={handleSaveProfile}
         isProcessing={isProcessing} isSavingProfile={isSavingProfile} router={router} 
       />
