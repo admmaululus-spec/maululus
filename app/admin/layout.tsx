@@ -1,3 +1,4 @@
+// app/admin/layout.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -12,7 +13,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
-  // States Profil & E-Wallet
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>('');
   const [walletBalance, setWalletBalance] = useState<number>(0);
@@ -42,7 +42,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       const currentRole = profile.role?.toLowerCase() || 'user';
       setUserRole(currentRole);
 
-      // Otorisasi: Hanya Admin yang boleh masuk
       if (currentRole === 'admin') {
         setIsAuthorized(true);
       } else {
@@ -50,7 +49,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         return;
       }
 
-      // --- AMBIL DATA KOIN ADMIN ---
       const { data: userData } = await supabase
         .from('users_data')
         .select('koin')
@@ -113,6 +111,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link href="/admin/skripsi" className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200 ${pathname?.includes('/admin/skripsi') ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20' : 'hover:bg-slate-800 hover:text-slate-200'}`}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
             Database Skripsi
+          </Link>
+
+          {/* TAMBAHAN MENU: Pusat Notifikasi */}
+          <Link href="/admin/notifikasi" className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200 ${pathname?.includes('/admin/notifikasi') ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20' : 'hover:bg-slate-800 hover:text-slate-200'}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" /></svg>
+            Pusat Notifikasi
           </Link>
 
           <Link href="/admin/promos" className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200 ${pathname?.includes('/admin/promos') ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20' : 'hover:bg-slate-800 hover:text-slate-200'}`}>

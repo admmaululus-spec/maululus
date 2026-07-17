@@ -71,7 +71,7 @@ export default function CoinPackagesSection() {
             <input type="number" className="w-full border p-2 rounded-lg text-sm mb-4" placeholder="Harga (Rp)" value={modal.data.harga} onChange={e => setModal({...modal, data: {...modal.data, harga: e.target.value}})} />
             <div className="flex gap-2">
               <button onClick={() => setModal({...modal, show: false})} className="w-full py-2 bg-slate-100 rounded-lg font-bold">Batal</button>
-              <button onClick={handleSave} className="w-full py-2 bg-blue-600 text-white rounded-lg font-bold">Simpan</button>
+              <button onClick={handleSave} className="w-full py-2 bg-blue-600 text-black rounded-lg font-bold">Simpan</button>
             </div>
           </div>
         </div>

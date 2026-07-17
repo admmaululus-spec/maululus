@@ -1,3 +1,4 @@
+// app/dashboard/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -22,14 +23,15 @@ export default function DashboardPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>('Mahasiswa');
   const [userWhatsapp, setUserWhatsapp] = useState('');
-  const [userNama, setUserNama] = useState(''); // TAMBAHAN: State untuk Nama
+  const [userNama, setUserNama] = useState('');
   const [koin, setKoin] = useState(0);
   const [isPro, setIsPro] = useState(false);
   
   const [riwayatList, setRiwayatList] = useState<RiwayatItem[]>([]);
   const [premiumProjects, setPremiumProjects] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]); // TAMBAHAN: State Riwayat Transaksi Topup
-  const [isSavingProfile, setIsSavingProfile] = useState(false); // TAMBAHAN: Loading state untuk simpan profil
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]); // TAMBAHAN: State Notifikasi
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   useEffect(() => {
     const initializeDashboard = async () => {
@@ -44,13 +46,21 @@ export default function DashboardPage() {
 
         await syncPendingData(currentUserId);
 
-        // TAMBAHAN: Menarik data transactions di Promise.all
-        const [userRes, historyRes, proyekRes, aiHistoryRes, transRes] = await Promise.all([
+        // PANGGIL API UNTUK MENG-EVALUASI ATURAN NOTIFIKASI (JALAN DI BACKGROUND)
+        fetch('/api/trigger-notif', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: currentUserId })
+        }).catch(err => console.error("Gagal trigger notif:", err));
+
+        // Menarik semua data termasuk Notifikasi
+        const [userRes, historyRes, proyekRes, aiHistoryRes, transRes, notifRes] = await Promise.all([
           supabase.from('users_data').select('*').eq('id', currentUserId).maybeSingle(),
           supabase.from('history_skripsi').select('*').eq('user_id', currentUserId).order('created_at', { ascending: false }),
           supabase.from('premium_projects').select('*').eq('user_id', currentUserId).eq('is_active', true).order('created_at', { ascending: false }),
           supabase.from('ai_tools_history').select('*').eq('user_id', currentUserId).order('created_at', { ascending: false }),
-          supabase.from('transactions').select('*').eq('user_id', currentUserId).order('created_at', { ascending: false })
+          supabase.from('transactions').select('*').eq('user_id', currentUserId).order('created_at', { ascending: false }),
+          supabase.from('notifications').select('*').or(`user_id.eq.${currentUserId},user_id.is.null`).order('created_at', { ascending: false })
         ]);
 
         let userData = userRes.data;
@@ -68,7 +78,8 @@ export default function DashboardPage() {
         setUserWhatsapp(userData?.whatsapp || '');
         setUserNama(userData?.nama || ''); 
         setPremiumProjects(proyekRes.data || []);
-        setTransactions(transRes.data || []); // Simpan riwayat transaksi
+        setTransactions(transRes.data || []); 
+        setNotifications(notifRes.data || []); // Menyimpan data notifikasi ke state
 
         const combinedHistory = [...(historyRes.data || []), ...(aiHistoryRes.data || [])];
         combinedHistory.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -122,7 +133,6 @@ export default function DashboardPage() {
     }
   };
 
-  // TAMBAHAN: Fungsi untuk menyimpan perubahan Nama & WhatsApp
   const handleSaveProfile = async (newName: string, newWhatsapp: string) => {
     setIsSavingProfile(true);
     try {
@@ -139,7 +149,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Gunakan nama dari DB jika ada, jika tidak pecah dari Email
   const displayNama = userNama 
     ? (userNama.charAt(0).toUpperCase() + userNama.slice(1)) 
     : (userEmail.split('@')[0].charAt(0).toUpperCase() + userEmail.split('@')[0].slice(1));
@@ -154,11 +163,11 @@ export default function DashboardPage() {
     <div className="flex h-full w-full bg-[#F4F7FE] font-sans text-slate-800 overflow-hidden relative">
       <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} activeMenu={activeMenu} setActiveMenu={setActiveMenu} userName={displayNama} isPro={isPro} handleLogout={handleLogoutClick} />
       
-      {/* TAMBAHAN: Mengoper props baru (transactions, userNama, handleSaveProfile) ke CenterContent */}
       <CenterContent 
         activeMenu={activeMenu} setActiveMenu={setActiveMenu} setIsSidebarOpen={setIsSidebarOpen} 
         userName={displayNama} userEmail={userEmail} userWhatsapp={userWhatsapp} userNama={userNama}
         koin={koin} riwayatList={riwayatList} premiumProjects={premiumProjects} transactions={transactions}
+        notifications={notifications} // MENGIRIM DATA NOTIFIKASI KE CENTER CONTENT
         handleBukaKunci={handleBukaKunci} handleSaveProfile={handleSaveProfile}
         isProcessing={isProcessing} isSavingProfile={isSavingProfile} router={router} 
       />

@@ -1,3 +1,4 @@
+// app/admin/page.tsx
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
@@ -20,10 +21,7 @@ export default function AdminDashboardPage() {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // Ambil Total User
       const { count: userCount } = await supabase.from('users_data').select('*', { count: 'exact', head: true });
-      
-      // Ambil Semua Proyek Premium
       const { data: projects } = await supabase.from('premium_projects').select('*').order('created_at', { ascending: false });
       
       let revenue = 0;
@@ -67,7 +65,6 @@ export default function AdminDashboardPage() {
         <p className="text-slate-500 mt-1">Ringkasan penjualan dan analitik platform Maululus.</p>
       </div>
 
-      {/* Area Statistik (Cards) */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Total Pendapatan</p>
@@ -94,7 +91,6 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Tabel Pesanan Terbaru */}
       <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex justify-between items-center">
           <h3 className="font-bold text-slate-800">Pesanan Expert Assistance Terbaru</h3>
