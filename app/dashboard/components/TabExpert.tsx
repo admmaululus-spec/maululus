@@ -68,7 +68,7 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
           alert("Pembayaran Lunas & Proyek Berhasil Dibuat! Kamu akan diarahkan ke WhatsApp Admin.");
 
           // Redirect ke WhatsApp Admin
-          const waNumber = '6285815999953';
+          const waNumber = '6282120002589';
           const waMessage = encodeURIComponent(`Halo Admin Maululus, pesanan Expert Assistance atas nama *${form.nama}* telah berhasil dibayar.\n\n*Paket:* ${selectedPaket.nama}\n*Order ID:* ${orderId}\n\nMohon segera diproses ya!`);
           window.location.href = `https://wa.me/${waNumber}?text=${waMessage}`;
         },
