@@ -26,7 +26,7 @@ export default function AdminUsersPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // State untuk menyimpan nilai input koin kustom setiap user (berdasarkan ID)
+  // State untuk menyimpan nilai input koin kustom setiap user
   const [customKoin, setCustomKoin] = useState<Record<string, string>>({});
   
   // State untuk Sorting (Default: urutkan berdasarkan koin terbanyak / desc)
@@ -46,7 +46,7 @@ export default function AdminUsersPage() {
     // 2. Ambil data dari history_skripsi (Tabel yang sudah bisa diakses admin)
     const { data: skripsiData } = await supabase.from('history_skripsi').select('user_id');
 
-    // 3. Ambil data riwayat AI (Jika RLS sudah dibuka)
+    // 3. Ambil data riwayat AI
     const { data: aiHistoryData } = await supabase.from('ai_tools_history').select('user_id');
 
     if (usersData) {
@@ -64,28 +64,65 @@ export default function AdminUsersPage() {
 
   useEffect(() => { fetchUsers(); }, []);
 
+  // FUNGSI UPDATE KOIN DENGAN ERROR HANDLER TEGAS
   const handleUpdateKoin = async (user: UserData, addAmount: number) => {
     setUpdatingId(user.id);
     const newKoin = user.koin + addAmount;
+    
     try {
-      await supabase.from('users_data').update({ koin: newKoin }).eq('id', user.id);
-      await supabase.from('transactions').insert({
-        user_id: user.id, user_email: user.email || 'Tanpa Email', paket_nama: 'Top Up Manual (Admin)',
-        koin_jumlah: addAmount, harga_rp: 0, metode: 'Admin Action', status: 'SUCCESS'
-      });
+      // Eksekusi update koin ke database
+      const { error: updateError } = await supabase
+        .from('users_data')
+        .update({ koin: newKoin })
+        .eq('id', user.id);
+        
+      if (updateError) throw updateError;
+
+      // Eksekusi simpan riwayat transaksi
+      const { error: insertError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: user.id, 
+          user_email: user.email || 'Tanpa Email', 
+          paket_nama: 'Top Up Manual (Admin)',
+          koin_jumlah: addAmount, 
+          harga_rp: 0, 
+          metode: 'Admin Action', 
+          status: 'SUCCESS'
+        });
+        
+      if (insertError) throw insertError;
+
+      // JIKA BERHASIL: Update angka di layar dan hapus nilai input
       setUsers(users.map(u => u.id === user.id ? { ...u, koin: newKoin } : u));
-    } catch (err) {
-      alert("Gagal menambahkan koin.");
+      setCustomKoin({...customKoin, [user.id]: ''});
+      alert(`Berhasil menambahkan ${addAmount} koin ke akun ${user.email || 'Klien'}`);
+
+    } catch (err: any) {
+      console.error("Gagal menambahkan koin:", err);
+      alert(`GAGAL UPDATE: ${err.message}. Pastikan aturan RLS Supabase sudah benar.`);
     } finally {
       setUpdatingId(null);
     }
   };
 
+  // FUNGSI TOGGLE PRO DENGAN ERROR HANDLER TEGAS
   const handleTogglePro = async (id: string, currentStatus: boolean) => {
     setUpdatingId(id);
-    await supabase.from('users_data').update({ is_pro: !currentStatus }).eq('id', id);
-    setUsers(users.map(u => u.id === id ? { ...u, is_pro: !currentStatus } : u));
-    setUpdatingId(null);
+    try {
+      const { error } = await supabase
+        .from('users_data')
+        .update({ is_pro: !currentStatus })
+        .eq('id', id);
+        
+      if (error) throw error;
+
+      setUsers(users.map(u => u.id === id ? { ...u, is_pro: !currentStatus } : u));
+    } catch (err: any) {
+      alert(`GAGAL UPDATE STATUS PRO: ${err.message}`);
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   const openHistoryModal = async (user: UserData) => {
@@ -236,7 +273,6 @@ export default function AdminUsersPage() {
                             const amount = parseInt(customKoin[user.id]);
                             if (amount && amount !== 0) {
                               handleUpdateKoin(user, amount);
-                              setCustomKoin({...customKoin, [user.id]: ''}); // Reset input setelah sukses
                             }
                           }} 
                           disabled={updatingId === user.id || !customKoin[user.id]} 
