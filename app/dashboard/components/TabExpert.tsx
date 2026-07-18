@@ -71,7 +71,7 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
 
   return (
     <div className="animate-in fade-in max-w-5xl mx-auto space-y-8 pb-10">
-      <div className="flex items-center gap-3 mb-2">
+      <div className="flex items-center gap-3 mb-6"> {/* Perbesar margin bawah header menjadi mb-6 */}
         <span className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl"><AcademicCapIcon /></span>
         <div>
           <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">Expert Assistance</h2>
@@ -79,9 +79,17 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
         {packages.map((pkg, idx) => (
-          <div key={pkg.id} className={`bg-white border border-slate-200 rounded-3xl p-8 shadow-sm flex flex-col justify-between hover:border-emerald-200 transition-all z-10${idx === 1 ? 'bg-[#0B1525] border-blue-900 shadow-xl transform lg:-translate-y-4'  : ''}`}>
+          <div 
+            key={pkg.id} 
+            // PERBAIKAN CLASS: Pisahkan bg-white agar tidak menumpuk, dan beri jarak spasi yang benar
+            className={`border rounded-3xl p-8 shadow-sm flex flex-col justify-between transition-all z-10 ${
+              idx === 1 
+                ? 'bg-[#0B1525] border-blue-900 shadow-xl transform lg:-translate-y-2' 
+                : 'bg-white border-slate-200 hover:border-emerald-200'
+            }`}
+          >
              <div>
                <div className="flex items-center justify-between mb-2">
                  <h3 className={`text-lg font-bold ${idx === 1 ? 'text-white' : 'text-slate-800'}`}>{pkg.nama}</h3>
@@ -90,7 +98,9 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
                <p className={`text-xs mb-6 leading-relaxed ${idx === 1 ? 'text-slate-400' : 'text-slate-500'}`}>{pkg.deskripsi}</p>
                <ul className="space-y-3 mb-8">
                  {pkg.fitur?.map((f: string, i: number) => (
-                   <li key={i} className={`text-sm flex items-center gap-2 ${idx === 1 ? 'text-white' : 'text-slate-700'}`}><span className="text-emerald-500">✔</span> {f}</li>
+                   <li key={i} className={`text-sm flex items-center gap-2 ${idx === 1 ? 'text-white' : 'text-slate-700'}`}>
+                     <span className="text-emerald-500">✔</span> {f}
+                   </li>
                  ))}
                </ul>
              </div>
