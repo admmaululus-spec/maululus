@@ -61,7 +61,7 @@ export default function LoadingOverlay() {
         {/* TEKS LOADING */}
         <div className="text-center">
           <h2 className="text-[#0f2a4a] text-lg font-black tracking-widest uppercase mb-1.5">
-            Menyiapkan Dashboard
+           Menyiapkan Engine AI Maululus
           </h2>
           <p className="text-slate-400 text-xs font-bold tracking-widest uppercase animate-pulse">
             Mohon Tunggu Sebentar...
