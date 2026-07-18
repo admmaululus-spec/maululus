@@ -12,7 +12,7 @@ type UserData = {
   created_at: string;
   generate_count?: number; 
 };
-type HistoryData = { id: string; paket_nama: string; koin_jumlah: number; harga_rp: number; metode: string; created_at: string };
+type HistoryData = { id: string; paket_nama: string; koin_jumlah: number; harga_rp: number; gross_amount?: number; metode: string; created_at: string };
 
 // Tipe data untuk konfigurasi sorting
 type SortConfig = {
@@ -65,7 +65,7 @@ export default function AdminUsersPage() {
   useEffect(() => { fetchUsers(); }, []);
 
   // ==========================================
-  // FUNGSI UPDATE KOIN DENGAN ERROR HANDLER & ORDER_ID
+  // FUNGSI UPDATE KOIN DENGAN ERROR HANDLER & ORDER_ID + GROSS_AMOUNT
   // ==========================================
   const handleUpdateKoin = async (user: UserData, addAmount: number) => {
     setUpdatingId(user.id);
@@ -83,16 +83,17 @@ export default function AdminUsersPage() {
         
       if (updateError) throw updateError;
 
-      // Eksekusi simpan riwayat transaksi (Wajib masukkan order_id)
+      // Eksekusi simpan riwayat transaksi (Wajib masukkan order_id dan gross_amount)
       const { error: insertError } = await supabase
         .from('transactions')
         .insert({
-          order_id: uniqueOrderId, // <--- Perbaikan Utama Di Sini
+          order_id: uniqueOrderId, 
           user_id: user.id, 
           user_email: user.email || 'Tanpa Email', 
           paket_nama: 'Top Up Manual (Admin)',
           koin_jumlah: addAmount, 
           harga_rp: 0, 
+          gross_amount: 0, // <--- PERBAIKAN: Menambahkan gross_amount agar tidak error Not-Null
           metode: 'Admin Action', 
           status: 'SUCCESS'
         });
@@ -327,7 +328,8 @@ export default function AdminUsersPage() {
                         {rec.paket_nama}
                         <div className="text-[9px] text-slate-400 font-normal mt-0.5">{rec.metode}</div>
                       </td>
-                      <td className="p-4 font-bold text-slate-800">{rec.harga_rp > 0 ? formatRp(rec.harga_rp) : '-'}</td>
+                      {/* PERBAIKAN TAMPILAN NOMINAL: Mendukung format harga_rp atau gross_amount */}
+                      <td className="p-4 font-bold text-slate-800">{(rec.harga_rp > 0 || (rec.gross_amount && rec.gross_amount > 0)) ? formatRp(rec.harga_rp || rec.gross_amount || 0) : '-'}</td>
                       <td className="p-4">
                         <span className={`px-2 py-1 rounded-md text-[10px] font-bold ${rec.koin_jumlah > 0 ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-slate-100 text-slate-700 border border-slate-200'}`}>
                           {rec.koin_jumlah > 0 ? `+${rec.koin_jumlah} Koin` : `${rec.koin_jumlah} Koin`}
