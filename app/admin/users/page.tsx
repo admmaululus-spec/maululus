@@ -64,10 +64,15 @@ export default function AdminUsersPage() {
 
   useEffect(() => { fetchUsers(); }, []);
 
-  // FUNGSI UPDATE KOIN DENGAN ERROR HANDLER TEGAS
+  // ==========================================
+  // FUNGSI UPDATE KOIN DENGAN ERROR HANDLER & ORDER_ID
+  // ==========================================
   const handleUpdateKoin = async (user: UserData, addAmount: number) => {
     setUpdatingId(user.id);
     const newKoin = user.koin + addAmount;
+    
+    // BUAT ORDER_ID UNIK AGAR TIDAK ERROR "NULL VALUE"
+    const uniqueOrderId = `ADMIN-TOPUP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     
     try {
       // Eksekusi update koin ke database
@@ -78,10 +83,11 @@ export default function AdminUsersPage() {
         
       if (updateError) throw updateError;
 
-      // Eksekusi simpan riwayat transaksi
+      // Eksekusi simpan riwayat transaksi (Wajib masukkan order_id)
       const { error: insertError } = await supabase
         .from('transactions')
         .insert({
+          order_id: uniqueOrderId, // <--- Perbaikan Utama Di Sini
           user_id: user.id, 
           user_email: user.email || 'Tanpa Email', 
           paket_nama: 'Top Up Manual (Admin)',
@@ -100,13 +106,15 @@ export default function AdminUsersPage() {
 
     } catch (err: any) {
       console.error("Gagal menambahkan koin:", err);
-      alert(`GAGAL UPDATE: ${err.message}. Pastikan aturan RLS Supabase sudah benar.`);
+      alert(`GAGAL UPDATE: ${err.message}`);
     } finally {
       setUpdatingId(null);
     }
   };
 
-  // FUNGSI TOGGLE PRO DENGAN ERROR HANDLER TEGAS
+  // ==========================================
+  // FUNGSI TOGGLE PRO DENGAN ERROR HANDLER
+  // ==========================================
   const handleTogglePro = async (id: string, currentStatus: boolean) => {
     setUpdatingId(id);
     try {
@@ -281,7 +289,6 @@ export default function AdminUsersPage() {
                           Top Up
                         </button>
                       </div>
-                      
                     </td>
                   </tr>
                 ))

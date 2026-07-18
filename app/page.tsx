@@ -26,7 +26,7 @@ export default function Home() {
       // 1. Cek Sesi User & Redirect
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        const ADMIN_EMAILS = ['vianeyricky@gmail.com', 'emailkamu@gmail.com']; 
+        const ADMIN_EMAILS = ['admin@maululus.com']; 
         if (session.user.email && ADMIN_EMAILS.includes(session.user.email)) {
           router.replace('/admin');
           return;
