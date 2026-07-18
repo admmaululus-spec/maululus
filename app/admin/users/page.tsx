@@ -26,6 +26,9 @@ export default function AdminUsersPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // State untuk menyimpan nilai input koin kustom setiap user (berdasarkan ID)
+  const [customKoin, setCustomKoin] = useState<Record<string, string>>({});
+  
   // State untuk Sorting (Default: urutkan berdasarkan koin terbanyak / desc)
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'koin', direction: 'desc' });
   
@@ -96,7 +99,6 @@ export default function AdminUsersPage() {
   // ==========================================
   const handleSort = (key: keyof UserData) => {
     let direction: 'asc' | 'desc' = 'desc';
-    // Jika kolom yang diklik sama dan posisinya desc, ubah jadi asc
     if (sortConfig.key === key && sortConfig.direction === 'desc') {
       direction = 'asc';
     }
@@ -105,18 +107,13 @@ export default function AdminUsersPage() {
 
   const sortedUsers = [...users].sort((a, b) => {
     if (!sortConfig.key) return 0;
-
-    let aValue = a[sortConfig.key] ?? ''; // Fallback string kosong jika null
+    let aValue = a[sortConfig.key] ?? ''; 
     let bValue = b[sortConfig.key] ?? '';
 
-    // Jika yang disortir adalah string (seperti email)
     if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return sortConfig.direction === 'asc' 
-        ? aValue.localeCompare(bValue) 
-        : bValue.localeCompare(aValue);
+      return sortConfig.direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
     }
 
-    // Jika yang disortir angka atau boolean
     if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
     if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
     return 0;
@@ -129,17 +126,14 @@ export default function AdminUsersPage() {
 
   const formatRp = (angka: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(angka);
 
-  // Komponen Helper untuk Ikon Segitiga Sorting
   const SortIcon = ({ columnKey }: { columnKey: keyof UserData }) => {
     if (sortConfig.key !== columnKey) {
-      // Ikon default abu-abu (tidak sedang disortir)
       return (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-slate-300 opacity-50 transition-opacity group-hover:opacity-100">
           <path fillRule="evenodd" d="M10 3a.75.75 0 01.53.22l3.25 3.25a.75.75 0 11-1.06 1.06L10.5 5.31V14.69l2.22-2.22a.75.75 0 111.06 1.06l-3.25 3.25a.75.75 0 01-1.06 0l-3.25-3.25a.75.75 0 111.06-1.06l2.22 2.22V5.31L6.28 7.53a.75.75 0 01-1.06-1.06l3.25-3.25A.75.75 0 0110 3z" clipRule="evenodd" />
         </svg>
       );
     }
-    // Ikon biru pekat menunjukkan arah sorting
     return sortConfig.direction === 'asc' ? (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-blue-600"><path fillRule="evenodd" d="M14.77 12.79a.75.75 0 01-1.06-.02L10 8.832 6.29 12.77a.75.75 0 11-1.08-1.04l4.25-4.5a.75.75 0 011.08 0l4.25 4.5a.75.75 0 01-.02 1.06z" clipRule="evenodd" /></svg>
     ) : (
@@ -174,35 +168,18 @@ export default function AdminUsersPage() {
           <table className="w-full text-left text-sm text-slate-600">
             <thead className="bg-slate-50 border-b border-slate-200 select-none">
               <tr>
-                {/* Header dengan aksi klik untuk Sorting */}
-                <th 
-                  className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px] cursor-pointer hover:bg-slate-100 transition-colors group"
-                  onClick={() => handleSort('email')}
-                >
+                <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px] cursor-pointer hover:bg-slate-100 transition-colors group" onClick={() => handleSort('email')}>
                   <div className="flex items-center gap-1.5">Email / WhatsApp <SortIcon columnKey="email" /></div>
                 </th>
-                
-                <th 
-                  className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px] cursor-pointer hover:bg-slate-100 transition-colors group"
-                  onClick={() => handleSort('koin')}
-                >
+                <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px] cursor-pointer hover:bg-slate-100 transition-colors group" onClick={() => handleSort('koin')}>
                   <div className="flex items-center gap-1.5">Sisa Koin <SortIcon columnKey="koin" /></div>
                 </th>
-                
-                <th 
-                  className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px] cursor-pointer hover:bg-slate-100 transition-colors group"
-                  onClick={() => handleSort('generate_count')}
-                >
+                <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px] cursor-pointer hover:bg-slate-100 transition-colors group" onClick={() => handleSort('generate_count')}>
                   <div className="flex items-center gap-1.5">Total Generate <SortIcon columnKey="generate_count" /></div>
                 </th>
-                
-                <th 
-                  className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px] cursor-pointer hover:bg-slate-100 transition-colors group"
-                  onClick={() => handleSort('is_pro')}
-                >
+                <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px] cursor-pointer hover:bg-slate-100 transition-colors group" onClick={() => handleSort('is_pro')}>
                   <div className="flex items-center gap-1.5">Status Paket <SortIcon columnKey="is_pro" /></div>
                 </th>
-                
                 <th className="px-6 py-4 font-bold text-slate-800 uppercase tracking-wider text-[10px] text-right">Aksi Cepat</th>
               </tr>
             </thead>
@@ -241,10 +218,34 @@ export default function AdminUsersPage() {
                         {user.is_pro ? '💎 PRO' : 'BASIC'}
                       </button>
                     </td>
-                    <td className="px-6 py-4 flex justify-end gap-2">
+                    <td className="px-6 py-4 flex justify-end gap-2 items-center">
                       <button onClick={() => openHistoryModal(user)} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors text-slate-600">Riwayat</button>
-                      <button onClick={() => handleUpdateKoin(user, 1)} disabled={updatingId === user.id} className="px-3 py-1.5 bg-blue-50 border border-blue-100 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors disabled:opacity-50">+1 Koin</button>
-                      <button onClick={() => handleUpdateKoin(user, 5)} disabled={updatingId === user.id} className="px-3 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors disabled:opacity-50 shadow-sm">+5 Koin</button>
+                      
+                      {/* INPUT KOIN DINAMIS */}
+                      <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all shadow-sm">
+                        <input 
+                          type="number" 
+                          placeholder="Jml" 
+                          value={customKoin[user.id] || ''}
+                          onChange={(e) => setCustomKoin({...customKoin, [user.id]: e.target.value})}
+                          className="w-16 px-2 py-1.5 text-xs text-center outline-none text-slate-700 font-bold placeholder-slate-300"
+                          min="1"
+                        />
+                        <button 
+                          onClick={() => {
+                            const amount = parseInt(customKoin[user.id]);
+                            if (amount && amount !== 0) {
+                              handleUpdateKoin(user, amount);
+                              setCustomKoin({...customKoin, [user.id]: ''}); // Reset input setelah sukses
+                            }
+                          }} 
+                          disabled={updatingId === user.id || !customKoin[user.id]} 
+                          className="px-3 py-1.5 bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors disabled:opacity-50 border-l border-slate-200"
+                        >
+                          Top Up
+                        </button>
+                      </div>
+                      
                     </td>
                   </tr>
                 ))

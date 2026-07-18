@@ -11,6 +11,15 @@ type JudulItem = {
   novelty_check: string;
 };
 
+// Daftar kalimat untuk setiap langkah loading
+const LOADING_STEPS = [
+  "Menganalisis parameter kampus dan program studi...",     // Step 0 (0 Detik)
+  "Mengevaluasi tren penelitian terbaru...",                // Step 1 (Mulai Detik 1.5)
+  "Mengonstruksi rumusan masalah dan variabel...",          // Step 2 (Mulai Detik 3.0) -> API CALL DIMULAI DI SINI
+  "Menyesuaikan pendekatan metodologi...",                  // Step 3 (Mulai Detik 4.5)
+  "Menyempurnakan tata bahasa dan finalisasi judul..."      // Step 4 (Mulai Detik 6.0 - Menunggu API Selesai)
+];
+
 export default function GeneratorPage() {
   const router = useRouter();
   
@@ -27,6 +36,7 @@ export default function GeneratorPage() {
   
   // States Loading & Hasil
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [hasilJudul, setHasilJudul] = useState<JudulItem[]>([]);
   const [aiKoreksi, setAiKoreksi] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -39,6 +49,9 @@ export default function GeneratorPage() {
     'Studi Kasus', 'Eksperimen', 'Lainnya (Ketik Sendiri...)'
   ];
 
+  // Fungsi utilitas untuk jeda (delay) waktu
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
   const handleGenerateJudul = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!universitas || !jurusan) {
@@ -47,6 +60,7 @@ export default function GeneratorPage() {
     }
 
     setIsLoading(true);
+    setLoadingStep(0);
     setErrorMsg('');
     setAiKoreksi('');
     setHasilJudul([]);
@@ -54,11 +68,35 @@ export default function GeneratorPage() {
     const metodologiFinal = metodologi === 'Lainnya (Ketik Sendiri...)' ? customMetodologi : metodologi;
 
     try {
-      const response = await fetch('/api/generate-judul', {
+      // -------------------------------------------------------------
+      // SIMULASI STEP 0 & 1 (Hanya UI, Tidak membebani server)
+      // -------------------------------------------------------------
+      await delay(1500); 
+      setLoadingStep(1); 
+      
+      await delay(1500); 
+      setLoadingStep(2);
+
+      // -------------------------------------------------------------
+      // STEP 2: DI SINI KITA BARU BENAR-BENAR MENGIRIM REQUEST KE API
+      // -------------------------------------------------------------
+      const apiPromise = fetch('/api/generate-judul', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ universitas, jurusan, minat, masalah, metodologi: metodologiFinal, jenisKarya }),
       });
+
+      // Lanjutkan animasi UI sementara API sedang berjalan di latar belakang
+      await delay(1500);
+      setLoadingStep(3);
+
+      await delay(1500);
+      setLoadingStep(4);
+
+      // -------------------------------------------------------------
+      // TUNGGU RESPONSE API SELESAI
+      // -------------------------------------------------------------
+      const response = await apiPromise;
       const data = await response.json();
       
       if (!response.ok) throw new Error(data.error || 'Terjadi kesalahan pada server');
@@ -111,9 +149,56 @@ export default function GeneratorPage() {
           <p className="text-slate-500 text-sm sm:text-base">Sesuaikan kampus, tingkat studi, dan masalah yang ingin diteliti.</p>
         </div>
 
-        {/* Form Card */}
-        <form onSubmit={handleGenerateJudul} className="rounded-[2rem] border border-slate-200/60 bg-white p-8 sm:p-10 shadow-sm">
+        {/* Form Card dengan Overlay */}
+        <form onSubmit={handleGenerateJudul} className="relative overflow-hidden rounded-[2rem] border border-slate-200/60 bg-white p-8 sm:p-10 shadow-sm">
           
+          {/* ======================================================== */}
+          {/* INTERACTIVE LOADING OVERLAY (TEMA PROFESIONAL)           */}
+          {/* ======================================================== */}
+          {isLoading && (
+            <div className="absolute inset-0 z-50 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-500">
+              <div className="w-full max-w-sm px-6 flex flex-col items-center">
+                
+                {/* Animasi Custom: Cincin Ganda Profesional */}
+                <div className="relative flex items-center justify-center w-20 h-20 mb-8">
+                  {/* Cincin Luar (Spin Normal) */}
+                  <div className="absolute inset-0 border-[3px] border-slate-100 rounded-full"></div>
+                  <div className="absolute inset-0 border-[3px] border-slate-900 border-t-transparent border-r-transparent rounded-full animate-spin" style={{ animationDuration: '2s' }}></div>
+                  
+                  {/* Cincin Dalam (Spin Berlawanan Arah & Lebih Cepat) */}
+                  <div className="absolute inset-2 border-[3px] border-blue-500/20 rounded-full"></div>
+                  <div className="absolute inset-2 border-[3px] border-blue-500 border-b-transparent border-l-transparent rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.2s' }}></div>
+                  
+                  {/* Inti (Core) Pulsing */}
+                  <div className="w-3 h-3 bg-slate-900 rounded-full animate-ping"></div>
+                  <div className="absolute w-4 h-4 bg-blue-500 rounded-full animate-pulse shadow-[0_0_15px_rgba(59,130,246,0.6)]"></div>
+                </div>
+                
+                {/* Teks Animasi Berganti */}
+                <div className="h-12 flex items-center justify-center overflow-hidden w-full relative">
+                  <h3 
+                    key={loadingStep} 
+                    className="absolute text-sm font-bold text-slate-800 text-center animate-in slide-in-from-bottom-4 fade-in duration-500"
+                  >
+                    {LOADING_STEPS[loadingStep]}
+                  </h3>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden shadow-inner">
+                  <div 
+                    className="h-full rounded-full transition-all duration-1000 ease-out bg-gradient-to-r from-slate-900 to-blue-500 relative"
+                    style={{ width: `${((loadingStep + 1) / LOADING_STEPS.length) * 100}%` }}
+                  ></div>
+                </div>
+                <p className="text-[9px] text-slate-400 font-bold tracking-widest mt-4 uppercase">
+                  Tahap {loadingStep + 1} dari {LOADING_STEPS.length}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Isi Formulir */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="space-y-2.5">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Nama Universitas <span className="text-blue-600">*</span></label>
@@ -128,7 +213,7 @@ export default function GeneratorPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="space-y-2.5">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Jenis Karya <span className="text-blue-600">*</span></label>
-              <select className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 cursor-pointer" value={jenisKarya} onChange={(e) => setJenisKarya(e.target.value)}>
+              <select className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 cursor-pointer appearance-none" value={jenisKarya} onChange={(e) => setJenisKarya(e.target.value)}>
                 {daftarJenisKarya.map((item) => (<option key={item} value={item}>{item}</option>))}
               </select>
             </div>
@@ -141,7 +226,7 @@ export default function GeneratorPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="space-y-2.5">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Metodologi <span className="text-slate-400 font-normal lowercase">(Opsional)</span></label>
-              <select className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 cursor-pointer" value={metodologi} onChange={(e) => setMetodologi(e.target.value)}>
+              <select className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 cursor-pointer appearance-none" value={metodologi} onChange={(e) => setMetodologi(e.target.value)}>
                 {daftarMetodologi.map((metode) => (<option key={metode} value={metode}>{metode}</option>))}
               </select>
               {metodologi === 'Lainnya (Ketik Sendiri...)' && (
@@ -155,7 +240,7 @@ export default function GeneratorPage() {
           </div>
 
           <button type="submit" disabled={isLoading} className="mt-4 w-full rounded-2xl bg-slate-900 p-4 text-white text-sm font-bold hover:bg-slate-800 disabled:opacity-70 disabled:cursor-not-allowed transition-all shadow-sm flex justify-center items-center gap-3">
-            {isLoading ? (<><div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-white"></div> Menganalisis Data...</>) : (<>Mulai Generate Judul</>)}
+            Mulai Generate Judul
           </button>
         </form>
 
@@ -184,7 +269,7 @@ export default function GeneratorPage() {
 
         {/* HASIL JUDUL */}
         {hasilJudul.length > 0 && !aiKoreksi && (
-          <div className="space-y-6 pt-4">
+          <div className="space-y-6 pt-4 animate-in slide-in-from-bottom-8">
             <h2 className="text-lg font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-500"></span>
               Rekomendasi Terbaik
