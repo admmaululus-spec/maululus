@@ -8,6 +8,7 @@ import Sidebar from './components/Sidebar';
 import CenterContent from './components/CenterContent';
 import RightPanel from './components/RightPanel';
 
+
 type RiwayatItem = { id: string; judul?: string; outline?: any; is_unlocked?: boolean; tool_name?: string; input_data?: string; result_data?: any; created_at: string };
 
 export default function DashboardPage() {

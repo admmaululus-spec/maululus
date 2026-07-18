@@ -8,6 +8,7 @@ import { supabase } from '@/app/lib/supabase';
 import FadeIn from './components/FadeIn';
 import ServicesSection from './components/home/ServicesSection';
 import Footer from './components/home/Footer';
+import LoadingOverlay from './components/LoadingOverlay';
 
 const FALLBACK_PACKAGES = [
   { id: 1, name: 'Paket Proposal', price: 1850000, features: ['Penyusunan Judul & Bab 1-3', 'Revisi Terstruktur'] },
@@ -57,6 +58,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-[#0f2a4a] selection:bg-green-200 overflow-x-hidden">
+      {/* LOADING OVERLAY DITAMBAHKAN DI SINI */}
+      <LoadingOverlay />
       
       {/* NAVBAR */}
       <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-md transition-all">
@@ -131,22 +134,17 @@ export default function Home() {
                 </div>
                 
                 <div className="hidden sm:block h-10 w-px bg-slate-200"></div>
-
               </div>
             </FadeIn>
 
             {/* Kolom Kanan: Mockup Dashboard (Diperbesar) */}
             <FadeIn delay={200} className="relative z-10 w-full flex justify-center lg:justify-end mt-10 lg:mt-0">
-              
-              {/* Tambahan scale-110 dan memperbesar max-w dari 600px menjadi 750px */}
               <div className="relative w-full max-w-[750px] lg:scale-110 lg:origin-right flex transform hover:-translate-y-2 transition-transform duration-500">
-                 
                  <img 
                     src="/mockup-dashboard2.png" 
                     alt="Mockup Dashboard Maululus" 
                     className="w-full h-auto object-contain drop-shadow-2xl rounded-2xl"
                  />
-                 
               </div>
               
               {/* Background Ornamen Biru (Dibuat sedikit lebih besar agar proporsional) */}

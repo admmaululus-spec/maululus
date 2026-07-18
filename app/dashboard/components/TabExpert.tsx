@@ -39,54 +39,30 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Silakan login kembali.");
 
-      const orderId = crypto.randomUUID();
+      const orderId = `EXPERT-${Date.now()}`;
+      const waNumber = '6282120002589';
 
-      // 1. KIRIM DATA KE API PAYMENT (Termasuk Koin yang Dipakai untuk Diskon)
-      const res = await fetch('/api/payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          order_id: orderId,
-          gross_amount: finalPrice,
-          first_name: form.nama,
-          email: session.user.email,
-          phone: form.no_whatsapp,
-          item_name: selectedPaket.nama,
-          koin_dipakai: useKoin ? koinTerpotong : 0 // 👈 Diskon Koin dikirim ke API
-        })
-      });
+      // Format Pesan Pembelian Expert
+      let waMessage = `Halo Admin Maululus, saya ingin memesan layanan Expert Assistance.\n\n`;
+      waMessage += `*Data Pemesan:*\n- Nama: ${form.nama}\n- WhatsApp: ${form.no_whatsapp}\n- NIM: ${form.nim || '-'}\n- Universitas: ${form.univ || '-'}\n- Jurusan: ${form.jurusan || '-'}\n- Judul Skripsi: ${form.judul}\n\n`;
+      
+      waMessage += `*Detail Pesanan:*\n- Paket: ${selectedPaket.nama}\n- Order ID: ${orderId}\n`;
+      waMessage += `- Harga Normal: ${formatRp(selectedPaket.harga)}\n`;
+      
+      if (useKoin) {
+        waMessage += `- Diskon Koin: -${formatRp(nominalDiskon)} (Tukar ${koinTerpotong} Koin)\n`;
+      }
+      
+      waMessage += `- *Total Pembayaran: ${formatRp(finalPrice)}*\n\n`;
+      waMessage += `Mohon panduannya untuk melakukan pembayaran manual.`;
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
-      // 2. TAMPILKAN POP-UP MIDTRANS
-      (window as any).snap.pay(data.token, {
-        onSuccess: async function(result: any) {
-          // KITA TIDAK LAGI MELAKUKAN QUERY DATABASE DARI SINI
-          // Pengurangan koin & pembukaan akses Expert sekarang otomatis dilakukan oleh Webhook secara aman.
-
-          alert("Pembayaran Lunas & Proyek Berhasil Dibuat! Kamu akan diarahkan ke WhatsApp Admin.");
-
-          // Redirect ke WhatsApp Admin
-          const waNumber = '6282120002589';
-          const waMessage = encodeURIComponent(`Halo Admin Maululus, pesanan Expert Assistance atas nama *${form.nama}* telah berhasil dibayar.\n\n*Paket:* ${selectedPaket.nama}\n*Order ID:* ${orderId}\n\nMohon segera diproses ya!`);
-          window.location.href = `https://wa.me/${waNumber}?text=${waMessage}`;
-        },
-        onPending: function(result: any) {
-          alert("Menunggu pembayaran Anda diselesaikan!");
-          setLoading(false);
-        },
-        onError: function(result: any) {
-          alert("Pembayaran gagal!");
-          setLoading(false);
-        },
-        onClose: function() {
-          setLoading(false);
-        }
-      });
-
+      // Buka tab WhatsApp
+      window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`, '_blank');
+      
+      setLoading(false);
+      setShowModal(false);
     } catch (err: any) {
-      alert("Gagal memproses: " + err.message);
+      alert("Gagal memproses pesanan: " + err.message);
       setLoading(false);
     }
   };
@@ -199,9 +175,9 @@ export default function TabExpert({ riwayatList = [], koin, userId }: any) {
                   <span className="text-2xl font-black text-blue-700">{formatRp(finalPrice)}</span>
                 </div>
                 <button onClick={handleOrderPayment} disabled={loading} className="w-full bg-[#00A859] hover:bg-[#00924e] active:scale-95 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/30 flex justify-center items-center gap-2">
-                  {loading ? 'Memproses Gateway...' : '💳 Bayar via Midtrans'}
+                  {loading ? 'Mengalihkan...' : '💬 Lanjut ke WhatsApp Admin'}
                 </button>
-                <p className="text-[9px] text-center text-slate-400 mt-4">Pilih QRIS, GoPay, atau Virtual Account Bank.</p>
+                <p className="text-[9px] text-center text-slate-400 mt-4">Transaksi diproses aman melalui admin resmi Maululus.</p>
               </div>
             </div>
           </div>
