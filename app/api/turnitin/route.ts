@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 
+export const runtime = 'edge'; 
+
 export async function POST(req: Request) {
   try {
     const cookieStore = await cookies();
@@ -43,10 +45,6 @@ export async function POST(req: Request) {
     const accessToken = loginData.access_token;
 
     // 2. Proses Pengiriman Dokumen ke Copyleaks
-    // Catatan: Copyleaks bekerja secara Asynchronous. Untuk produksi skala besar, 
-    // Anda membutuhkan endpoint Webhook untuk menerima hasil pemindaian.
-    // Di bawah ini adalah contoh logika sinkron sederhana (bergantung jenis langganan API Anda).
-
     const scanId = `maululus_${Date.now()}`;
     
     const submitRes = await fetch(`https://api.copyleaks.com/v3/education/submit/text/${scanId}`, {
@@ -58,9 +56,8 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         base64: Buffer.from(text).toString('base64'),
         properties: {
-          sandbox: true, // Ubah ke 'false' jika sudah siap produksi untuk memotong saldo Copyleaks asli
+          sandbox: true, // Ubah ke 'false' jika sudah siap memotong saldo Copyleaks asli
           webhooks: {
-             // Pastikan mengganti ini jika Anda menggunakan webhooks asli
              status: `https://maululus.id/api/webhook/copyleaks/{status}/${scanId}` 
           }
         }
@@ -71,11 +68,9 @@ export async function POST(req: Request) {
         throw new Error("Gagal mengirim dokumen ke pemindai Copyleaks");
     }
 
-    // Karena sistem default Copyleaks membutuhkan waktu untuk webhook, 
-    // untuk sementara kita format return hasil sukses di sini:
     return NextResponse.json({ 
         result: {
-            score: 0, // Nilai asli akan masuk ke webhook jika diimplementasikan penuh
+            score: 0, 
             matches: []
         },
         message: "Dokumen berhasil dikirim ke Copyleaks. Menunggu Webhook."
