@@ -52,7 +52,7 @@ export function TabKoin({ koin, riwayatList, setActiveMenu }: any) {
               <tbody>
                 {riwayatTransaksi.length > 0 ? riwayatTransaksi.map((item: any, idx: number) => {
                   let deduct = 1;
-                  if (item.tool_name === 'Turnitin Check') deduct = 20;
+                  if (item.tool_name === 'Turnitin Check' || item.tool_name === 'Academic Similarity Checker') deduct = 20;
                   else if (item.tool_name === 'Parafrase' || item.tool_name === 'AI Draft Writer') deduct = 15;
                   else if (item.tool_name === 'Cari Jurnal' || item.tool_name === 'Buat Judul') deduct = 5;
                   else if (item.tool_name === 'Ringkasan Jurnal') deduct = 3;
@@ -154,9 +154,15 @@ export function TabTopup({ koin }: any) {
                 <h3 className="text-lg font-bold text-slate-800 mb-1 mt-2">{pkg.nama}</h3>
                 <p className="text-[10px] text-slate-500 mb-6">{pkg.deskripsi}</p>
                 
-                <div className="flex items-end gap-2 mb-6 border-b border-slate-200/50 pb-6">
-                  <span className={`text-5xl font-black ${pkg.is_best_seller ? 'text-amber-500' : 'text-slate-800'}`}>{pkg.koin}</span>
-                  <span className="text-sm font-bold text-slate-500 mb-1.5">Koin</span>
+                <div className="flex flex-col mb-6 border-b border-slate-200/50 pb-6">
+                  <div className="flex items-end gap-2">
+                    <span className={`text-5xl font-black ${pkg.is_best_seller ? 'text-amber-500' : 'text-slate-800'}`}>{pkg.koin}</span>
+                    <span className="text-sm font-bold text-slate-500 mb-1.5">Koin</span>
+                  </div>
+                  {/* Menampilkan harga di bawah jumlah koin */}
+                  <div className="text-lg font-bold text-slate-600 mt-2">
+                    {formatRp(pkg.harga)}
+                  </div>
                 </div>
                 
                 <ul className="space-y-3 mb-8">
