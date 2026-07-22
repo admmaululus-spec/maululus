@@ -8,7 +8,6 @@ import Sidebar from './components/Sidebar';
 import CenterContent from './components/CenterContent';
 import RightPanel from './components/RightPanel';
 
-
 type RiwayatItem = { id: string; judul?: string; outline?: any; is_unlocked?: boolean; tool_name?: string; input_data?: string; result_data?: any; created_at: string };
 
 export default function DashboardPage() {
@@ -20,6 +19,7 @@ export default function DashboardPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false); // 👈 PERBAIKAN: State loading logout
 
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>('Mahasiswa');
@@ -116,7 +116,18 @@ export default function DashboardPage() {
   };
 
   const handleLogoutClick = () => setShowLogoutModal(true);
-  const confirmLogout = async () => { await supabase.auth.signOut(); router.replace('/auth'); };
+  
+  // 👈 PERBAIKAN: Fungsi logout yang menangani loading dan hard-redirect
+  const confirmLogout = async () => { 
+    setIsLoggingOut(true);
+    try {
+      await supabase.auth.signOut(); 
+      window.location.href = '/auth'; // Mengganti router.replace dengan hard-redirect
+    } catch (error) {
+      console.error("Logout gagal:", error);
+      setIsLoggingOut(false);
+    }
+  };
 
   const handleBukaKunci = async (id_skripsi: string) => {
     if (koin < 1) return alert('Koin tidak cukup! Silakan top-up terlebih dahulu.');
@@ -195,8 +206,20 @@ export default function DashboardPage() {
             <h3 className="text-xl font-extrabold text-slate-800 mb-2">Yakin ingin keluar?</h3>
             <p className="text-sm text-slate-500 mb-8 leading-relaxed">Sesi Anda saat ini akan diakhiri dan Anda harus masuk kembali untuk mengakses dashboard.</p>
             <div className="flex gap-3">
-              <button onClick={() => setShowLogoutModal(false)} className="flex-1 py-3.5 px-4 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors">Batal</button>
-              <button onClick={confirmLogout} className="flex-1 py-3.5 px-4 bg-rose-600 text-white font-bold rounded-xl hover:bg-rose-700 transition-colors shadow-lg shadow-rose-600/30">Ya, Keluar</button>
+              <button 
+                onClick={() => setShowLogoutModal(false)} 
+                disabled={isLoggingOut} // 👈 PERBAIKAN: Nonaktifkan saat proses logout
+                className="flex-1 py-3.5 px-4 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={confirmLogout} 
+                disabled={isLoggingOut} // 👈 PERBAIKAN: Nonaktifkan tombol dan ubah teks saat proses logout
+                className="flex-1 py-3.5 px-4 bg-rose-600 text-white font-bold rounded-xl hover:bg-rose-700 transition-colors shadow-lg shadow-rose-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoggingOut ? 'Keluar...' : 'Ya, Keluar'}
+              </button>
             </div>
           </div>
         </div>

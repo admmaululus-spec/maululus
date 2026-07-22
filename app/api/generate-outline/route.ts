@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
     const safeJudul = String(judul).substring(0, 300);
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { responseMimeType: "application/json", temperature: 0.3 } });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite', generationConfig: { responseMimeType: "application/json", temperature: 0.3 } });
 
     const promptText = `Kamu adalah Profesor ahli. Buatkan kerangka skripsi (outline) detail dari BAB 1 hingga BAB 5, dan SATU BAB TAMBAHAN berisi Rekomendasi Jurnal untuk skripsi berjudul: "${safeJudul}".
       PENTING: Buat JSON Object dengan root key "outline" yang berisi array of objects.

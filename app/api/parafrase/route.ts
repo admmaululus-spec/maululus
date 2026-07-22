@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     await supabase.from('ai_tools_history').insert({ user_id: userId, tool_name: 'Parafrase', input_data: `Teks (${String(text).length} karakter)` });
 
     const safeText = String(text).substring(0, 5000);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.4 } });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite', generationConfig: { temperature: 0.4 } });
     const promptText = `Kamu adalah akademisi dan editor jurnal ahli. Tugasmu adalah mem-parafrase teks berikut agar lolos uji plagiarisme (Turnitin) namun tetap mempertahankan makna aslinya secara utuh. 
       Aturan:
       1. Gunakan bahasa Indonesia akademis yang baku, formal, dan natural.

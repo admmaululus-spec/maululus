@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
     const safeInput = String(input_data).substring(0, 2000);
     const safeFormat = String(format_style).substring(0, 50);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite' });
 
     const prompt = `Kamu adalah asisten akademik ahli. Pengguna memberikan data mentah, judul, atau kutipan jurnal berikut:
       "${safeInput}"

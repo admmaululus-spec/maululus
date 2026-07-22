@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     await supabase.from('ai_tools_history').insert({ user_id: userId, tool_name: 'Ringkasan Jurnal', input_data: `Teks (${String(text).length} karakter)` });
 
     const safeText = String(text).substring(0, 10000);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.3 } });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite', generationConfig: { temperature: 0.3 } });
 
     const promptText = `Kamu adalah asisten peneliti ahli. Tolong baca teks/abstrak jurnal berikut dan buatkan ringkasannya dalam bahasa Indonesia yang baku.
       Format ringkasan harus seperti ini (Gunakan bullet points agar mudah dibaca):
