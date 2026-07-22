@@ -1,3 +1,4 @@
+// app/dashboard/parafrase/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -39,22 +40,39 @@ export default function ParafrasePage() {
     if (!textInput.trim()) return alert("Teks tidak boleh kosong!");
     
     if (Number(koin) < Number(hargaKoin)) {
-      alert(`Koin tidak cukup! Kamu butuh ${hargaKoin} Koin.`);
+      alert(`Koin tidak cukup! Anda membutuhkan ${hargaKoin} Koin.`);
       return router.push('/dashboard?menu=topup');
     }
 
     setIsProcessing(true);
 
     try {
+      // 1. Potong koin terlebih dahulu
       const { error } = await supabase.from('users_data').update({ koin: Number(koin) - Number(hargaKoin) }).eq('id', userId);
       if (error) throw error;
       setKoin(prev => Number(prev) - Number(hargaKoin));
 
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      const hasilParafrase = `(Hasil Parafrase AI) ${textInput.split(' ').reverse().join(' ')}`;
+      // 2. Panggil API AI Parafrase yang sesungguhnya (Bukan lagi dummy teks terbalik)
+      const response = await fetch('/api/parafrase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: textInput }) // Pastikan properti 'text' sesuai dengan yang diharapkan route.ts Anda
+      });
+
+      if (!response.ok) {
+        throw new Error("Gagal mendapatkan respons dari server AI.");
+      }
+
+      const data = await response.json();
+      
+      // Mengambil hasil dari API. Sesuaikan 'data.result' dengan key JSON dari API Anda (bisa data.text, data.hasil, dll)
+      const hasilParafrase = data.result || data.hasil || data.text || "Hasil tidak ditemukan.";
       
       setTextOutput(hasilParafrase);
 
+      // 3. Simpan riwayat ke Supabase
       if (userId) {
         await supabase.from('ai_tools_history').insert({
           user_id: userId,
@@ -65,7 +83,9 @@ export default function ParafrasePage() {
       }
 
     } catch (err) {
+      console.error(err);
       alert("Gagal memproses parafrase. Koin dikembalikan.");
+      // Kembalikan koin jika proses AI gagal
       if (userId) {
         await supabase.from('users_data').update({ koin: koin }).eq('id', userId);
         setKoin(koin);

@@ -1,3 +1,4 @@
+// app/dashboard/ringkasan-jurnal/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -15,6 +16,9 @@ export default function RingkasanJurnalPage() {
   const [textInput, setTextInput] = useState('');
   const [textOutput, setTextOutput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // 👈 State baru untuk notifikasi pop-up copy
+  const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
     const initializePage = async () => {
@@ -36,7 +40,7 @@ export default function RingkasanJurnalPage() {
     if (hargaKoin === null) return;
     
     if (Number(koin) < Number(hargaKoin)) {
-      alert(`Koin tidak cukup! Kamu butuh ${hargaKoin} Koin.`);
+      alert(`Koin tidak cukup! Anda butuh ${hargaKoin} Koin.`);
       return router.push('/dashboard?menu=topup');
     }
 
@@ -77,6 +81,18 @@ export default function RingkasanJurnalPage() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // 👈 Fungsi baru untuk menangani aksi Copy dan memunculkan Pop-up
+  const handleCopyText = () => {
+    if (!textOutput) return;
+    navigator.clipboard.writeText(textOutput);
+    setIsCopied(true);
+    
+    // Sembunyikan pop-up otomatis setelah 2 detik
+    setTimeout(() => {
+      setIsCopied(false);
+    }, 2000);
   };
 
   if (hargaKoin === null) return <div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div></div>;
@@ -122,13 +138,28 @@ export default function RingkasanJurnalPage() {
             </button>
           </div>
 
-          <div className="bg-blue-50/50 border border-blue-100 rounded-3xl p-6 shadow-sm flex flex-col relative">
-            <div className="flex justify-between items-center mb-4">
+          <div className="bg-blue-50/50 border border-blue-100 rounded-3xl p-6 shadow-sm flex flex-col relative overflow-hidden">
+            <div className="flex justify-between items-center mb-4 z-20 relative">
               <h3 className="font-bold text-sm text-blue-900">Hasil Rangkuman Poin</h3>
               {textOutput && (
-                <button onClick={() => navigator.clipboard.writeText(textOutput)} className="text-xs font-bold text-blue-600 bg-white border border-blue-200 px-3 py-1.5 rounded-lg shadow-sm hover:scale-105 transition-transform">Salin Teks</button>
+                <button 
+                  onClick={handleCopyText} 
+                  className="text-xs font-bold text-blue-600 bg-white border border-blue-200 px-3 py-1.5 rounded-lg shadow-sm hover:scale-105 transition-transform flex items-center gap-1"
+                >
+                  {isCopied ? 'Tersalin!' : 'Salin Teks'}
+                </button>
               )}
             </div>
+            
+            {/* 👈 Pop-up Notifikasi Berhasil Disalin */}
+            {isCopied && (
+              <div className="absolute top-16 right-6 bg-slate-800 text-white text-[11px] font-bold px-3 py-2 rounded-lg shadow-xl animate-in fade-in slide-in-from-top-2 duration-200 flex items-center gap-2 z-30 pointer-events-none">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-3.5 h-3.5 text-green-400">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                Teks berhasil disalin!
+              </div>
+            )}
             
             {isProcessing ? (
                <div className="flex-1 flex flex-col items-center justify-center space-y-4">
