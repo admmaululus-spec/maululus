@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 
-// WAJIB ADA UNTUK CLOUDFLARE PAGES
 export const runtime = 'edge'; 
 
 export async function POST(req: Request) {
@@ -25,12 +24,7 @@ export async function POST(req: Request) {
 
     if (!query) return NextResponse.json({ error: 'Query pencarian tidak boleh kosong' }, { status: 400 });
 
-    /* 
-       LOGIKA PEMOTONGAN KOIN TETAP DIHAPUS DARI SINI
-       Untuk mencegah Double Charge, karena koin sudah dipotong di frontend.
-    */
-
-    // Simpan ke history
+    // Simpan history pencarian
     await supabase.from('ai_tools_history').insert({ 
       user_id: userId, 
       tool_name: 'Cari Jurnal', 
@@ -39,39 +33,49 @@ export async function POST(req: Request) {
 
     const rawQuery = String(query).substring(0, 150);
     const searchKeyword = rawQuery.replace(/(analisis|pengaruh|implementasi|terhadap|dengan|berbasis|untuk|dan|di|pada|studi|kasus)/gi, '').trim();
-    
-    // Jika setelah difilter kata kunci jadi kosong, gunakan rawQuery aslinya agar API tidak error
     const finalQuery = searchKeyword || rawQuery;
 
     const limit = 5;
-    const s2Url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(finalQuery)}&limit=${limit}&fields=title,authors,year,url,venue`;
     
-    // Tambahkan User-Agent dan Accept headers agar tidak diblokir oleh Semantic Scholar
-    const response = await fetch(s2Url, {
+    // MENGGUNAKAN CROSSREF API (Gratis, Tanpa API Key, Jurnal Asli)
+    // Parameter mailto digunakan sebagai etiket (politeness) agar server Crossref tidak memblokir request kita
+    const crossrefUrl = `https://api.crossref.org/works?query=${encodeURIComponent(finalQuery)}&select=title,author,issued,URL,container-title&rows=${limit}&mailto=admin@maululus.id`;
+    
+    const response = await fetch(crossrefUrl, {
       headers: {
-        'User-Agent': 'Maululus-App/1.0',
+        'User-Agent': 'Maululus-App/1.0 (mailto:admin@maululus.id)',
         'Accept': 'application/json'
       }
     });
     
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Semantic Scholar API Error (${response.status}): ${errorText}`);
+      throw new Error(`Crossref API Error (${response.status}): ${errorText}`);
     }
     
     const data = await response.json();
+    const items = data.message.items || [];
     
-    const formattedResults = (data.data || []).map((paper: any) => {
-      const authorNames = paper.authors && paper.authors.length > 0 
-        ? paper.authors.map((a: any) => a.name).join(', ') 
-        : 'Penulis Tidak Diketahui';
-        
+    // Memformat hasil dari Crossref agar sesuai dengan desain frontend Anda
+    const formattedResults = items.map((paper: any) => {
+      // Susun nama penulis
+      let authorNames = 'Penulis Tidak Diketahui';
+      if (paper.author && paper.author.length > 0) {
+        authorNames = paper.author.map((a: any) => `${a.given || ''} ${a.family || ''}`.trim()).join(', ');
+      }
+
+      // Ambil tahun terbit
+      let year = 'N/A';
+      if (paper.issued && paper.issued['date-parts'] && paper.issued['date-parts'][0]) {
+        year = paper.issued['date-parts'][0][0]; // Array format: [[YYYY, MM, DD]]
+      }
+
       return { 
-        judul: paper.title, 
-        tahun: paper.year || 'N/A', 
+        judul: paper.title && paper.title.length > 0 ? paper.title[0] : 'Judul Tidak Tersedia', 
+        tahun: year, 
         penulis: authorNames, 
-        sumber: paper.venue || 'Jurnal Internasional', 
-        link: paper.url || '#' 
+        sumber: paper['container-title'] && paper['container-title'].length > 0 ? paper['container-title'][0] : 'Jurnal Akademik', 
+        link: paper.URL || '#' 
       };
     });
 
