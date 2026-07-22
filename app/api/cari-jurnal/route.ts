@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 
-// Dihapus agar menggunakan runtime Node.js standar yang lebih stabil untuk fetch API pihak ketiga
-// export const runtime = 'edge'; 
+// WAJIB ADA UNTUK CLOUDFLARE PAGES
+export const runtime = 'edge'; 
 
 export async function POST(req: Request) {
   try {
@@ -26,9 +26,8 @@ export async function POST(req: Request) {
     if (!query) return NextResponse.json({ error: 'Query pencarian tidak boleh kosong' }, { status: 400 });
 
     /* 
-       LOGIKA PEMOTONGAN KOIN DIHAPUS DARI SINI:
-       Karena di frontend (page.tsx) koin sudah dipotong dan memiliki fungsi rollback, 
-       pemotongan koin di backend ini dinonaktifkan untuk mencegah Double Charge.
+       LOGIKA PEMOTONGAN KOIN TETAP DIHAPUS DARI SINI
+       Untuk mencegah Double Charge, karena koin sudah dipotong di frontend.
     */
 
     // Simpan ke history
@@ -41,13 +40,13 @@ export async function POST(req: Request) {
     const rawQuery = String(query).substring(0, 150);
     const searchKeyword = rawQuery.replace(/(analisis|pengaruh|implementasi|terhadap|dengan|berbasis|untuk|dan|di|pada|studi|kasus)/gi, '').trim();
     
-    // PERBAIKAN: Jika setelah difilter kata kunci jadi kosong, gunakan rawQuery aslinya agar API tidak error
+    // Jika setelah difilter kata kunci jadi kosong, gunakan rawQuery aslinya agar API tidak error
     const finalQuery = searchKeyword || rawQuery;
 
     const limit = 5;
     const s2Url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(finalQuery)}&limit=${limit}&fields=title,authors,year,url,venue`;
     
-    // PERBAIKAN: Tambahkan User-Agent dan Accept headers agar tidak diblokir (403) oleh Semantic Scholar
+    // Tambahkan User-Agent dan Accept headers agar tidak diblokir oleh Semantic Scholar
     const response = await fetch(s2Url, {
       headers: {
         'User-Agent': 'Maululus-App/1.0',
@@ -80,7 +79,6 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Error API Cari Jurnal:", error);
-    // Menampilkan pesan error asli di terminal untuk mempermudah debugging jika terjadi masalah lagi
     return NextResponse.json({ error: `Gagal mencari jurnal: ${error.message}` }, { status: 500 });
   }
 }
