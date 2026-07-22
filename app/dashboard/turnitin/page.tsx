@@ -76,19 +76,26 @@ export default function TurnitinCheckPage() {
     }
   };
 
-  // Helper Warna Berdasarkan Nilai Similarity (Main Score)
+  // 👈 PERBAIKAN: Fungsi untuk membawa teks ke halaman Parafrase
+  const handlePerbaikiAI = () => {
+    if (!textInput) return;
+    // Simpan draft teks ke memori lokal browser
+    localStorage.setItem('maululus_draft_parafrase', textInput);
+    // Pindah ke halaman Parafrase
+    router.push('/dashboard/parafrase');
+  };
+
   const getScoreColor = (score: number) => {
     if (score <= 15) return 'text-emerald-600 border-emerald-500 bg-emerald-50';
     if (score <= 30) return 'text-yellow-600 border-yellow-400 bg-yellow-50';
     return 'text-rose-600 border-rose-500 bg-rose-50';
   };
 
-  // Helper Warna Kalimat (Highlighting)
   const getSentenceColor = (sim: number) => {
     if (sim > 80) return 'bg-rose-200/60 text-rose-900 border-b border-rose-300';
     if (sim >= 50) return 'bg-orange-200/60 text-orange-900 border-b border-orange-300';
     if (sim >= 20) return 'bg-yellow-100 text-yellow-800 border-b border-yellow-200';
-    return 'bg-transparent text-slate-700'; // Normal (<20)
+    return 'bg-transparent text-slate-700'; 
   };
 
   if (hargaKoin === null) return <div className="h-[100dvh] bg-slate-50 flex items-center justify-center"><div className="w-8 h-8 border-4 border-rose-200 border-t-rose-600 rounded-full animate-spin"></div></div>;
@@ -117,7 +124,6 @@ export default function TurnitinCheckPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* KOLOM KIRI (INPUT) - TETAP SAMA */}
           <div className="lg:col-span-5 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col h-fit sticky top-24">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-sm text-slate-700">Teks Dokumen</h3>
@@ -138,7 +144,6 @@ export default function TurnitinCheckPage() {
             </button>
           </div>
 
-          {/* KOLOM KANAN (HASIL) - REFACTOR TOTAL */}
           <div className="lg:col-span-7 bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-sm flex flex-col">
             <h3 className="font-bold text-lg text-slate-800 mb-6 border-b border-slate-200 pb-4">Laporan Similarity & AI Analysis</h3>
             
@@ -150,7 +155,6 @@ export default function TurnitinCheckPage() {
             ) : scanResult ? (
               <div className="animate-in fade-in slide-in-from-bottom-4 space-y-8">
                 
-                {/* 1. SCORE & STATUS */}
                 <div className="grid grid-cols-3 gap-4">
                   <div className="col-span-1 border border-slate-100 rounded-2xl p-4 flex flex-col items-center justify-center bg-slate-50 shadow-sm">
                     <div className={`w-24 h-24 rounded-full flex items-center justify-center border-8 shadow-inner mb-3 ${getScoreColor(scanResult.overallSimilarity)}`}>
@@ -184,28 +188,33 @@ export default function TurnitinCheckPage() {
                   </div>
                 </div>
 
-                {/* 2. AI ANALYSIS & RECOMMENDATION */}
                 <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
                   <h4 className="text-sm font-black text-indigo-900 mb-3 flex items-center gap-2">✨ Analisis AI</h4>
                   <p className="text-sm text-indigo-800/80 leading-relaxed mb-5">{scanResult.analysis}</p>
                   
                   <h5 className="text-xs font-bold text-indigo-900 mb-2 uppercase tracking-wide">Rekomendasi Perbaikan:</h5>
-                  <ul className="space-y-2">
+                  <ul className="space-y-2 mb-6">
                     {scanResult.recommendation.map((rec, i) => (
                       <li key={i} className="text-sm text-indigo-800 flex items-start gap-2">
                         <span className="text-indigo-500 mt-0.5">✔</span> {rec}
                       </li>
                     ))}
                   </ul>
+
+                  {/* 👈 PERBAIKAN: Tombol untuk melompat ke Tool Parafrase */}
+                  <button 
+                    onClick={handlePerbaikiAI}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl text-sm transition-all flex items-center gap-2 shadow-md shadow-indigo-200 active:scale-95"
+                  >
+                    <span>✨</span> Perbaiki dengan AI Parafrase
+                  </button>
                 </div>
 
-                {/* 3. HIGHLIGHT PARAGRAPH & SENTENCES */}
                 <div>
                   <h4 className="font-bold text-slate-800 mb-4">Tinjauan Teks (Highlight)</h4>
                   <div className="space-y-6">
                     {scanResult.paragraphs.map((para) => {
-                       // Find matching sentences for this paragraph
                        const pSentences = scanResult.sentences.filter(s => para.text.includes(s.text));
                        
                        return (
@@ -239,7 +248,6 @@ export default function TurnitinCheckPage() {
                   </div>
                 </div>
 
-                {/* 4. DAFTAR REFERENSI */}
                 {scanResult.papers.length > 0 && (
                   <div className="border-t border-slate-200 pt-8">
                     <h4 className="font-bold text-slate-800 mb-4">Referensi Akademik Ditemukan</h4>

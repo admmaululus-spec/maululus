@@ -26,10 +26,14 @@ export default function ParafrasePage() {
       if (userData) setKoin(userData.koin);
 
       const { data: pricingData } = await supabase.from('ai_tools_pricing').select('koin').eq('id', 'parafrase').single();
-      if (pricingData) {
-        setHargaKoin(pricingData.koin);
-      } else {
-        setHargaKoin(15);
+      setHargaKoin(pricingData ? pricingData.koin : 15);
+      
+      // 👈 PERBAIKAN: Menangkap draft teks dari Halaman Similarity Checker
+      const draftText = localStorage.getItem('maululus_draft_parafrase');
+      if (draftText) {
+        setTextInput(draftText);
+        // Hapus dari memory agar tidak muncul terus jika user masuk lagi nanti
+        localStorage.removeItem('maululus_draft_parafrase'); 
       }
     };
     initializePage();
@@ -47,32 +51,23 @@ export default function ParafrasePage() {
     setIsProcessing(true);
 
     try {
-      // 1. Potong koin terlebih dahulu
       const { error } = await supabase.from('users_data').update({ koin: Number(koin) - Number(hargaKoin) }).eq('id', userId);
       if (error) throw error;
       setKoin(prev => Number(prev) - Number(hargaKoin));
 
-      // 2. Panggil API AI Parafrase yang sesungguhnya (Bukan lagi dummy teks terbalik)
       const response = await fetch('/api/parafrase', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text: textInput }) // Pastikan properti 'text' sesuai dengan yang diharapkan route.ts Anda
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textInput })
       });
 
-      if (!response.ok) {
-        throw new Error("Gagal mendapatkan respons dari server AI.");
-      }
+      if (!response.ok) throw new Error("Gagal mendapatkan respons dari server AI.");
 
       const data = await response.json();
-      
-      // Mengambil hasil dari API. Sesuaikan 'data.result' dengan key JSON dari API Anda (bisa data.text, data.hasil, dll)
       const hasilParafrase = data.result || data.hasil || data.text || "Hasil tidak ditemukan.";
       
       setTextOutput(hasilParafrase);
 
-      // 3. Simpan riwayat ke Supabase
       if (userId) {
         await supabase.from('ai_tools_history').insert({
           user_id: userId,
@@ -85,7 +80,6 @@ export default function ParafrasePage() {
     } catch (err) {
       console.error(err);
       alert("Gagal memproses parafrase. Koin dikembalikan.");
-      // Kembalikan koin jika proses AI gagal
       if (userId) {
         await supabase.from('users_data').update({ koin: koin }).eq('id', userId);
         setKoin(koin);
@@ -95,10 +89,10 @@ export default function ParafrasePage() {
     }
   };
 
-  if (hargaKoin === null) return <div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>;
+  if (hargaKoin === null) return <div className="h-[100dvh] bg-slate-50 flex items-center justify-center"><div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
+    <div className="h-[100dvh] overflow-y-auto bg-slate-50 font-sans text-slate-800 pb-20">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-semibold text-sm transition-colors">
@@ -115,7 +109,7 @@ export default function ParafrasePage() {
         <div className="mb-8">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl text-2xl mb-4">🔄</div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">AI Parafrase</h1>
-          <p className="text-slate-500 mt-2">Tulis ulang kalimat skripsimu agar lolos Turnitin dengan bahasa akademis yang natural.</p>
+          <p className="text-slate-500 mt-2">Tulis ulang kalimat skripsimu agar lolos deteksi plagiasi dengan bahasa akademis yang natural.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -130,6 +124,8 @@ export default function ParafrasePage() {
               placeholder="Tempelkan paragraf yang ingin di-parafrase di sini..."
               className="flex-1 min-h-[300px] w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm resize-none outline-none focus:border-indigo-500 transition-all"
             ></textarea>
+            
+            {/* Tombol Parafrase ini yang akan memotong Koin Parafrase dengan aman */}
             <button 
               onClick={handleParafrase}
               disabled={isProcessing || !textInput}
