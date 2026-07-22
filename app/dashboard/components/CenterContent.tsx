@@ -10,27 +10,58 @@ import TabJurnal from './TabJurnal';
 import TabExpert from './TabExpert';
 import { TabKoin, TabTopup } from './BillingTabs';
 
+// 1. TAMBAHKAN INTERFACE: Agar kode lebih rapi, aman, dan auto-complete berfungsi
+interface CenterContentProps {
+  activeMenu: string;
+  setActiveMenu: (menu: string) => void;
+  setIsSidebarOpen: (isOpen: boolean) => void;
+  userName: string;
+  userEmail: string;
+  userWhatsapp: string;
+  userNama: string;
+  koin: number;
+  riwayatList: any[];
+  premiumProjects: any[];
+  transactions: any[];
+  notifications: any[];
+  handleBukaKunci: (id: string) => void;
+  handleSaveProfile: (nama: string, whatsapp: string) => void;
+  isProcessing: string | null;
+  isSavingProfile: boolean;
+  router: any;
+  userId: string | null;
+}
+
 export default function CenterContent({ 
   activeMenu, setActiveMenu, setIsSidebarOpen, userName, userEmail, 
   userWhatsapp, userNama, koin, riwayatList, premiumProjects, transactions, 
-  notifications, // 👈 PERBAIKAN: Menangkap Props Notifikasi
-  handleBukaKunci, handleSaveProfile, isProcessing, isSavingProfile, router, userId 
-}: any) {
+  notifications, handleBukaKunci, handleSaveProfile, isProcessing, 
+  isSavingProfile, router, userId 
+}: CenterContentProps) {
   
-  const dokumenList = riwayatList.filter((item: any) => !item.tool_name);
-  const jurnalRefList = riwayatList.filter((item: any) => item.tool_name);
-  const activeProject = premiumProjects && premiumProjects.length > 0 ? premiumProjects[0] : null;
+  // 2. NULL-SAFETY: Tambahkan fallback (|| []) agar tidak crash saat array masih kosong/undefined
+  const safeRiwayatList = riwayatList || [];
+  const dokumenList = safeRiwayatList.filter((item: any) => !item.tool_name);
+  const jurnalRefList = safeRiwayatList.filter((item: any) => item.tool_name);
+  const activeProject = premiumProjects?.length > 0 ? premiumProjects[0] : null;
 
   const validMenus = ['dashboard', 'proyek', 'ai-tools', 'dokumen', 'jurnal', 'pengaturan', 'expert', 'koin', 'topup', 'transaksi', 'notifikasi', 'bantuan'];
 
-  // Hitung berapa banyak notifikasi yang belum dibaca (is_read = false)
-  const unreadCount = notifications ? notifications.filter((n: any) => !n.is_read).length : 0;
+  // Hitung berapa banyak notifikasi yang belum dibaca dengan optional chaining (?.)
+  const unreadCount = notifications?.filter((n: any) => !n.is_read).length || 0;
+  
+  // Ambil inisial nama dengan aman
+  const initial = userName ? userName.charAt(0).toUpperCase() : 'U';
 
   return (
     <main className="flex-1 flex flex-col h-full overflow-hidden">
       <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-6 lg:px-10 shrink-0">
         <div className="flex items-center gap-4">
-          <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-slate-500">
+          <button 
+            onClick={() => setIsSidebarOpen(true)} 
+            className="lg:hidden text-slate-500"
+            aria-label="Buka Menu Navigasi"
+          >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" /></svg>
           </button>
           <div>
@@ -44,32 +75,37 @@ export default function CenterContent({
             <span className="text-sm font-bold text-slate-800">{koin} Koin</span>
           </button>
           
-          <button onClick={() => setActiveMenu('notifikasi')} className="relative text-slate-400 hover:text-slate-600 transition-colors">
+          <button 
+            onClick={() => setActiveMenu('notifikasi')} 
+            className="relative text-slate-400 hover:text-slate-600 transition-colors"
+            aria-label="Lihat Notifikasi"
+          >
             <BellIcon />
-            {/* PERBAIKAN: Badge angka merah dinamis mengikuti jumlah belum dibaca */}
             {unreadCount > 0 && (
                <span className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-red-500 border-2 border-white rounded-full text-[8px] font-bold text-white flex items-center justify-center">
-                 {unreadCount}
+                 {unreadCount > 99 ? '99+' : unreadCount}
                </span>
             )}
           </button>
           
           <div className="hidden md:flex items-center gap-2 ml-2 pl-4 border-l border-slate-200 cursor-pointer" onClick={() => setActiveMenu('pengaturan')}>
-             <div className="h-8 w-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm">{userName.charAt(0)}</div>
+             <div className="h-8 w-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm">
+               {initial}
+             </div>
              <span className="text-sm font-semibold text-slate-700 hover:text-blue-600 transition-colors">{userName}</span>
           </div>
         </div>
       </header>
 
       <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#F8FAFC]">
-        {activeMenu === 'dashboard' && <TabDashboard riwayatList={riwayatList} premiumProjects={premiumProjects} activeProject={activeProject} router={router} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} setActiveMenu={setActiveMenu} />}
+        {activeMenu === 'dashboard' && <TabDashboard riwayatList={safeRiwayatList} premiumProjects={premiumProjects} activeProject={activeProject} router={router} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} setActiveMenu={setActiveMenu} />}
         {activeMenu === 'proyek' && <TabProyek premiumProjects={premiumProjects} activeProject={activeProject} setActiveMenu={setActiveMenu} />}
-        {activeMenu === 'expert' && <TabExpert riwayatList={riwayatList} koin={koin} userId={userId} />}
+        {activeMenu === 'expert' && <TabExpert riwayatList={safeRiwayatList} koin={koin} userId={userId} />}
         
         {activeMenu === 'ai-tools' && <TabAiTools koin={koin} userId={userId} />}
         {activeMenu === 'dokumen' && <TabDokumen dokumenList={dokumenList} router={router} handleBukaKunci={handleBukaKunci} isProcessing={isProcessing} />}
         {activeMenu === 'jurnal' && <TabJurnal jurnalRefList={jurnalRefList} router={router} setActiveMenu={setActiveMenu} />}
-        {activeMenu === 'koin' && <TabKoin koin={koin} riwayatList={riwayatList} setActiveMenu={setActiveMenu} />}
+        {activeMenu === 'koin' && <TabKoin koin={koin} riwayatList={safeRiwayatList} setActiveMenu={setActiveMenu} />}
         {activeMenu === 'topup' && <TabTopup koin={koin} />}
         
         {/* TAB TRANSAKSI */}
@@ -91,14 +127,14 @@ export default function CenterContent({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {transactions && transactions.length > 0 ? transactions.map((trx: any) => (
+                  {transactions?.length > 0 ? transactions.map((trx: any) => (
                     <tr key={trx.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4 font-medium text-slate-500">{new Date(trx.created_at).toLocaleString('id-ID')}</td>
                       <td className="px-6 py-4 font-bold text-slate-800">
                         {trx.paket_nama}
                         <div className="text-[10px] font-normal text-slate-400 mt-0.5">{trx.metode}</div>
                       </td>
-                      <td className="px-6 py-4 font-bold text-slate-800">Rp{trx.harga_rp.toLocaleString('id-ID')}</td>
+                      <td className="px-6 py-4 font-bold text-slate-800">Rp{(trx.harga_rp || 0).toLocaleString('id-ID')}</td>
                       <td className="px-6 py-4">
                         <span className={`border px-2.5 py-1 rounded-md text-[10px] font-bold ${trx.koin_jumlah >= 0 ? 'bg-green-100 text-green-700 border-green-200' : 'bg-amber-100 text-amber-700 border-amber-200'}`}>
                           {trx.koin_jumlah >= 0 ? `+${trx.koin_jumlah} Koin` : `${trx.koin_jumlah} Koin`}
@@ -125,7 +161,7 @@ export default function CenterContent({
             <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200">
               <div className="flex items-center gap-5 mb-8 pb-8 border-b border-slate-100">
                 <div className="w-20 h-20 bg-[#0B1525] text-white text-3xl font-bold rounded-full flex items-center justify-center uppercase shadow-md shrink-0">
-                  {userName.charAt(0)}
+                  {initial}
                 </div>
                 <div>
                   <h3 className="text-2xl font-bold text-slate-800">{userName}</h3>
@@ -175,9 +211,8 @@ export default function CenterContent({
               <p className="text-slate-500 text-sm mt-1">Pembaruan sistem dan peringatan akun Anda.</p>
             </div>
             
-            {/* PERBAIKAN: Menggunakan data 'notifications' dari props secara dinamis */}
             <div className="space-y-4">
-              {notifications && notifications.length > 0 ? notifications.map((notif: any) => (
+              {notifications?.length > 0 ? notifications.map((notif: any) => (
                 <div key={notif.id} className={`border rounded-2xl p-5 flex gap-4 items-start transition-all ${!notif.is_read ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-slate-200'}`}>
                   <div className={`p-2.5 rounded-full shrink-0 text-xl ${!notif.is_read ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}>
                     {notif.icon || '🔔'}

@@ -1,10 +1,11 @@
+// app/dashboard/components/TabAiTools.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { SparklesIcon, ToolItem, TargetIcon, PencilIcon, RefreshIcon, SummarizeIcon, MagnifyIcon, CitationIcon, ShieldCheckIcon } from './IconsAndUI';
 
-export default function TabAiTools({ koin, userId }: any) {
+export default function TabAiTools({ koin }: any) { // 👈 userId tidak lagi wajib dari props
   const router = useRouter();
   const [tools, setTools] = useState<any[]>([]);
   const [isDeducting, setIsDeducting] = useState(false);
@@ -39,19 +40,31 @@ export default function TabAiTools({ koin, userId }: any) {
       return;
     }
     
-    // Validasi saldo koin
-    if (Number(koin) < Number(tool.koin)) {
-      alert(`Koin kamu tidak cukup. Butuh ${tool.koin} Koin untuk mengakses ${tool.nama}.`);
-      return;
-    }
-    
     setIsDeducting(true);
     try {
-      // Potong koin
+      // 👈 SOLUSI AMPUH: Ambil sesi pengguna langsung saat tombol diklik!
+      const { data: { session }, error: authError } = await supabase.auth.getSession();
+      const currentUserId = session?.user?.id;
+
+      // Cek apakah ID valid
+      if (authError || !currentUserId) {
+        alert("Sesi Anda tidak valid atau telah berakhir. Silakan refresh halaman.");
+        setIsDeducting(false);
+        return;
+      }
+
+      // Validasi saldo koin
+      if (Number(koin) < Number(tool.koin)) {
+        alert(`Koin Anda tidak cukup. Butuh ${tool.koin} Koin untuk mengakses ${tool.nama}.`);
+        setIsDeducting(false);
+        return;
+      }
+      
+      // Potong koin dengan ID yang dijamin Valid
       const { error } = await supabase
         .from('users_data')
         .update({ koin: Number(koin) - Number(tool.koin) })
-        .eq('id', userId);
+        .eq('id', currentUserId); // 👈 Memakai ID langsung dari Sesi, bukan dari props
         
       if (error) throw error;
       

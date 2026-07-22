@@ -19,7 +19,7 @@ export default function DashboardPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false); // 👈 PERBAIKAN: State loading logout
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>('Mahasiswa');
@@ -31,7 +31,7 @@ export default function DashboardPage() {
   const [riwayatList, setRiwayatList] = useState<RiwayatItem[]>([]);
   const [premiumProjects, setPremiumProjects] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]); 
-  const [notifications, setNotifications] = useState<any[]>([]); // 👈 State Notifikasi
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [isSavingProfile, setIsSavingProfile] = useState(false); 
 
   useEffect(() => {
@@ -47,14 +47,12 @@ export default function DashboardPage() {
 
         await syncPendingData(currentUserId);
 
-        // TRIGGER API RULES ENGINE (Di Belakang Layar)
         fetch('/api/trigger-notif', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: currentUserId })
         }).catch(err => console.error(err));
 
-        // Mengambil seluruh data termasuk Notifikasi
         const [userRes, historyRes, proyekRes, aiHistoryRes, transRes, notifRes] = await Promise.all([
           supabase.from('users_data').select('*').eq('id', currentUserId).maybeSingle(),
           supabase.from('history_skripsi').select('*').eq('user_id', currentUserId).order('created_at', { ascending: false }),
@@ -80,7 +78,7 @@ export default function DashboardPage() {
         setUserNama(userData?.nama || ''); 
         setPremiumProjects(proyekRes.data || []);
         setTransactions(transRes.data || []);
-        setNotifications(notifRes.data || []); // 👈 Set data Notif ke State
+        setNotifications(notifRes.data || []); 
 
         const combinedHistory = [...(historyRes.data || []), ...(aiHistoryRes.data || [])];
         combinedHistory.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -116,13 +114,11 @@ export default function DashboardPage() {
   };
 
   const handleLogoutClick = () => setShowLogoutModal(true);
-  
-  // 👈 PERBAIKAN: Fungsi logout yang menangani loading dan hard-redirect
   const confirmLogout = async () => { 
     setIsLoggingOut(true);
     try {
       await supabase.auth.signOut(); 
-      window.location.href = '/auth'; // Mengganti router.replace dengan hard-redirect
+      window.location.href = '/auth'; 
     } catch (error) {
       console.error("Logout gagal:", error);
       setIsLoggingOut(false);
@@ -165,7 +161,6 @@ export default function DashboardPage() {
     ? (userNama.charAt(0).toUpperCase() + userNama.slice(1)) 
     : (userEmail.split('@')[0].charAt(0).toUpperCase() + userEmail.split('@')[0].slice(1));
 
-  // 👈 PERBAIKAN PENTING: Hitung jumlah notifikasi yang belum dibaca
   const unreadNotifCount = notifications ? notifications.filter(n => !n.is_read).length : 0;
 
   if (isLoading) return (
@@ -177,7 +172,6 @@ export default function DashboardPage() {
   return (
     <div className="flex h-full w-full bg-[#F4F7FE] font-sans text-slate-800 overflow-hidden relative">
       
-      {/* 👈 PERBAIKAN PENTING: Mengirim props `unreadNotifCount` ke Sidebar */}
       <Sidebar 
         isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} 
         activeMenu={activeMenu} setActiveMenu={setActiveMenu} 
@@ -188,6 +182,7 @@ export default function DashboardPage() {
       
       <CenterContent 
         activeMenu={activeMenu} setActiveMenu={setActiveMenu} setIsSidebarOpen={setIsSidebarOpen} 
+        userId={userId} 
         userName={displayNama} userEmail={userEmail} userWhatsapp={userWhatsapp} userNama={userNama}
         koin={koin} riwayatList={riwayatList} premiumProjects={premiumProjects} transactions={transactions}
         notifications={notifications} 
@@ -208,14 +203,14 @@ export default function DashboardPage() {
             <div className="flex gap-3">
               <button 
                 onClick={() => setShowLogoutModal(false)} 
-                disabled={isLoggingOut} // 👈 PERBAIKAN: Nonaktifkan saat proses logout
+                disabled={isLoggingOut} 
                 className="flex-1 py-3.5 px-4 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors disabled:opacity-50"
               >
                 Batal
               </button>
               <button 
                 onClick={confirmLogout} 
-                disabled={isLoggingOut} // 👈 PERBAIKAN: Nonaktifkan tombol dan ubah teks saat proses logout
+                disabled={isLoggingOut} 
                 className="flex-1 py-3.5 px-4 bg-rose-600 text-white font-bold rounded-xl hover:bg-rose-700 transition-colors shadow-lg shadow-rose-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoggingOut ? 'Keluar...' : 'Ya, Keluar'}
