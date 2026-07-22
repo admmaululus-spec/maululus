@@ -1,3 +1,4 @@
+// app/dashboard/turnitin/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -36,7 +37,7 @@ export default function TurnitinCheckPage() {
     if (hargaKoin === null) return;
     
     if (Number(koin) < Number(hargaKoin)) {
-      alert(`Koin tidak cukup! Layanan ini membutuhkan ${hargaKoin} Koin.`);
+      alert(`Koin Anda tidak cukup! Layanan ini membutuhkan ${hargaKoin} Koin.`);
       return router.push('/dashboard?menu=topup');
     }
 
@@ -44,39 +45,60 @@ export default function TurnitinCheckPage() {
     setScanResult(null);
 
     try {
+      // 1. Potong koin
       const { error } = await supabase.from('users_data').update({ koin: Number(koin) - Number(hargaKoin) }).eq('id', userId);
       if (error) throw error;
       setKoin(prev => Number(prev) - Number(hargaKoin));
 
-      // Simulasi delay scanning API Copyleaks
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      
-      const resData = {
-        score: 24,
-        matches: ["https://id.wikipedia.org/wiki/Sistem_Informasi", "https://jurnal.ugm.ac.id/teknologi-informasi"]
-      };
-      setScanResult(resData);
-
-      await supabase.from('ai_tools_history').insert({
-        user_id: userId,
-        tool_name: 'Turnitin Check',
-        input_data: textInput.substring(0, 100) + '...',
-        result_data: resData
+      // 2. Kirim teks ke Backend untuk diproses Copyleaks
+      const res = await fetch('/api/turnitin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textInput })
       });
 
-    } catch (err) {
-      alert("Sistem sedang sibuk. Koin dikembalikan.");
-      await supabase.from('users_data').update({ koin: koin }).eq('id', userId);
-      setKoin(koin);
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "Gagal menghubungi server plagiasi");
+      }
+      
+      const data = await res.json();
+      
+      // Ambil hasil asli dari API internal kita
+      const resData = {
+        score: data.result.score,
+        matches: data.result.matches || []
+      };
+      
+      setScanResult(resData);
+
+      // 3. Simpan Riwayat
+      if (userId) {
+        await supabase.from('ai_tools_history').insert({
+          user_id: userId,
+          tool_name: 'Turnitin Check',
+          input_data: textInput.substring(0, 100) + '...',
+          result_data: resData
+        });
+      }
+
+    } catch (err: any) {
+      console.error(err);
+      alert(`Gagal memproses dokumen: ${err.message}. Koin dikembalikan.`);
+      // Rollback Koin
+      if (userId) {
+        await supabase.from('users_data').update({ koin: koin }).eq('id', userId);
+        setKoin(koin);
+      }
     } finally {
       setIsScanning(false);
     }
   };
 
-  if (hargaKoin === null) return <div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-8 h-8 border-4 border-rose-200 border-t-rose-600 rounded-full animate-spin"></div></div>;
+  if (hargaKoin === null) return <div className="h-[100dvh] bg-slate-50 flex items-center justify-center"><div className="w-8 h-8 border-4 border-rose-200 border-t-rose-600 rounded-full animate-spin"></div></div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
+    <div className="h-[100dvh] overflow-y-auto bg-slate-50 font-sans text-slate-800 pb-20">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2 text-slate-500 hover:text-rose-600 font-semibold text-sm transition-colors">
@@ -94,7 +116,7 @@ export default function TurnitinCheckPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl text-2xl shrink-0">🛡️</div>
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Cek Plagiasi</h1>
-            <p className="text-slate-500 mt-2 text-sm max-w-xl">Pindai dokumenmu untuk mendeteksi kesamaan teks.</p>
+            <p className="text-slate-500 mt-2 text-sm max-w-xl">Pindai dokumen Anda untuk mendeteksi kesamaan teks dengan Copyleaks.</p>
           </div>
         </div>
 
@@ -124,7 +146,7 @@ export default function TurnitinCheckPage() {
             {isScanning ? (
               <div className="flex-1 flex flex-col items-center justify-center">
                 <div className="relative w-20 h-20"><div className="absolute inset-0 border-4 border-slate-200 rounded-full"></div><div className="absolute inset-0 border-4 border-rose-500 rounded-full border-t-transparent animate-spin"></div></div>
-                <p className="text-sm font-bold text-rose-600 mt-6 animate-pulse">Scanning...</p>
+                <p className="text-sm font-bold text-rose-600 mt-6 animate-pulse">Menghubungkan ke Copyleaks...</p>
               </div>
             ) : scanResult ? (
               <div className="animate-in fade-in slide-in-from-bottom-4">
@@ -134,10 +156,17 @@ export default function TurnitinCheckPage() {
                   </div>
                   <p className="text-sm font-bold mt-4 text-slate-700">Indeks Kemiripan</p>
                 </div>
-                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Sumber Ditemukan:</h4>
-                <div className="space-y-2">
-                  {scanResult.matches.map((url, idx) => (<a key={idx} href={url} target="_blank" className="block p-3 bg-white border border-slate-200 rounded-xl text-xs text-blue-600 truncate hover:bg-slate-100">🔗 {url.replace('https://', '')}</a>))}
-                </div>
+                
+                {scanResult.matches && scanResult.matches.length > 0 && (
+                  <>
+                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Sumber Ditemukan:</h4>
+                    <div className="space-y-2">
+                      {scanResult.matches.map((url, idx) => (
+                        <a key={idx} href={url} target="_blank" className="block p-3 bg-white border border-slate-200 rounded-xl text-xs text-blue-600 truncate hover:bg-slate-100">🔗 {url.replace('https://', '')}</a>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
                <div className="flex-1 flex flex-col items-center justify-center opacity-50 pt-10"><span className="text-5xl mb-4 grayscale">📄</span><p className="text-xs text-slate-500">Laporan akan tampil di sini.</p></div>
